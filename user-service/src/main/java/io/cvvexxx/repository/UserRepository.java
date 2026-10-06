@@ -6,7 +6,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
-
-@Repository
+// Методов в классе нет, т.к. JpaRepository сам имеет методы с которыми знает как работать без их описания в самом классе
+// Поэтому дефолтные методы save, delete, update, findById и т.д. можно не описывать
+@Repository // Аналогично @Service и @RestController создает бин
 public interface UserRepository extends JpaRepository<User, UUID> {
 }

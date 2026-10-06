@@ -15,28 +15,30 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@RequiredArgsConstructor
-@Slf4j
-@RequestMapping("/api/auth")
+@RestController //Аннотация для спринга чтобы он создал singleton-бин этого класса, также означает, что этот класс принимает http-запросы
+@RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля
+@Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе
+@RequestMapping("/api/auth") //Префикс всех эндоинтов этого класса
 public class AuthController {
 
+    // Внедряем в класс Service, чтобы делигировать ему бизнес-логику
     private final DefaultUserService userService;
 
+    //Http-метод и uri эндпоинта (складывается с RequestMapping, т.е. тут будет /api/auth/register)
     @PostMapping("/register")
-    public ResponseEntity<CreatedUserDto> registerUser(
-            @RequestBody @Valid NewUserDto newUserDto,
-            BindingResult bindingResult
+    public ResponseEntity<CreatedUserDto> registerUser( //ResponseEntity помогает сериализовать объекты и выставлять http-status
+            @RequestBody @Valid NewUserDto newUserDto, //@RequestBody означает что этот параметр будет передан в теле запроса
+            BindingResult bindingResult //Класс для проверки валидации входных данных (@Valid)
     ) throws BindException {
-        if (bindingResult.hasErrors()) {
+        if (bindingResult.hasErrors()) { //Логика проверки валидности входных данных
             if (bindingResult instanceof BindException exception) {
                 throw exception;
             }
             throw new BindException(bindingResult);
         } else {
-            log.info("trying to register user with username: {}", newUserDto.username());
+            log.info("trying to register user with username: {}", newUserDto.username()); //логируем попытку регистрации
 
-            return ResponseEntity.ok(userService.registerUser(newUserDto));
+            return ResponseEntity.ok(userService.registerUser(newUserDto)); //Возвращаем 200 с телом запроса(CreatedUserDto)
         }
     }
 }

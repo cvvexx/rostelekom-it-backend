@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
+//Аннотация спринга, которая позволяет настраивать бины, для последующей работы с ними в программе
+//Можете эти классы сильно не читать(Кроме SecurityConfig), вам тут мало чо надо
 @Configuration
 public class KeycloakConfig {
 

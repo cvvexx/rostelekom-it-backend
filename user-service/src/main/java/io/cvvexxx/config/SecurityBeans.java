@@ -19,19 +19,24 @@ import java.util.stream.Stream;
 @Configuration
 public class SecurityBeans {
 
+    //Основной бин конфигурации для Spring Security, определяет цепочку фильтров, которые проходит запрос перед тем,
+    //как дойти до самого контроллера
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         request -> request
-                                .requestMatchers("/api/auth/register").permitAll()
-                                .anyRequest().authenticated()
+                                .requestMatchers("/api/auth/register").permitAll()//Разрешаем доступ к эндпоинту регистрации всем пользователям
+                                .anyRequest().authenticated()//Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован, иначе 403
                 )
+                //Сессия нигде не хранится, все взаимодействие идет через JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                //Дает понять, что наш микросервис является resourceServer'ом в контексте OAuth2
+                //(Рекомендую про это посмотреть/прочитать, там же узнаете что такое Identity Provider(каковым Keycloak и является))
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwtConfigurer ->
-                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())))//Описание правил, по которым парсить JWT
                 .build();
     }
 

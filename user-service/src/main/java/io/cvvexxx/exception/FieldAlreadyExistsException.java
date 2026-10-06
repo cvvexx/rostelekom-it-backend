@@ -2,6 +2,7 @@ package io.cvvexxx.exception;
 
 import lombok.Getter;
 
+//Кастомный Exception, чтобы было проще обрабатывать ошибки
 @Getter
 public class FieldAlreadyExistsException extends RuntimeException {
 

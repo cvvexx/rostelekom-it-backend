@@ -20,17 +20,22 @@ import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
+@Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
+@RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля
+@Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе
 public class DefaultUserService implements UserService {
 
     private final Keycloak keycloak;
+    // Внедряем Repository, чтобы делегировать ему работу с базой данных
     private final UserRepository userRepository;
 
+    //@Value отвечает за внедрение данных из application.properties, достаем значение переменной keycloak.realm
     @Value("${keycloak.realm}")
-    private String realm;
+    private String realm; // realm(пространство для Keycloak)
 
+
+    // в этом методе просто бизнес логика, подготавливаем данные для отправки в Keycloak для регистрации
+    // и сохраняем в свою users_db. Построчно впадлу писать, мб потом для Олега напишу
     @Override
     public CreatedUserDto registerUser(NewUserDto dto) {
         String username = dto.username().trim().toLowerCase(Locale.ROOT);
@@ -61,14 +66,17 @@ public class DefaultUserService implements UserService {
         }
 
         try {
+            //сохраняем в бд сразу после вызова этого метода
             User saved = userRepository.saveAndFlush(
                     new User(UUID.fromString(keycloakUserId), username, firstName, lastName)
             );
 
+            //Если все норм, то возвращаем, если нет, то проваливаемся в catch
             return new CreatedUserDto(saved.getId(), saved.getUsername());
         } catch (RuntimeException e) {
             log.error("Failed to save user. Rolling back Keycloak user {}", keycloakUserId, e);
             try {
+                //т.к. не получилось сохранить юзера в бд, то соответственно удаляем его из Keycloak
                 usersResource.get(keycloakUserId).remove();
             } catch (Exception ex) {
                 log.error("Failed to rollback Keycloak user deletion for ID: {}", keycloakUserId, ex);
