@@ -2,7 +2,7 @@ services:
 
   users_db:
     image: postgres:16
-    container_name: merchly_users_db
+    container_name: rostelekom_users_db
     restart: always
     env_file:
       - .env.dev
