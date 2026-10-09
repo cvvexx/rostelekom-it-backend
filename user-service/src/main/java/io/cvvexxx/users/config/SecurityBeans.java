@@ -27,7 +27,7 @@ public class SecurityBeans {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         request -> request
-                                .requestMatchers("/api/auth/register").permitAll()//Разрешаем доступ к эндпоинту регистрации всем пользователям
+                                .requestMatchers("/api/users/register").permitAll()//Разрешаем доступ к эндпоинту регистрации всем пользователям
                                 .anyRequest().authenticated()//Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован, иначе 403
                 )
                 //Сессия нигде не хранится, все взаимодействие идет через JWT

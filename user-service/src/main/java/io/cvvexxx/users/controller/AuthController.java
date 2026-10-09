@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController //Аннотация для спринга чтобы он создал singleton-бин этого класса, также означает, что этот класс принимает http-запросы
 @RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля
 @Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе
-@RequestMapping("/api/auth") //Префикс всех эндоинтов этого класса
+@RequestMapping("/api/users") //Префикс всех эндоинтов этого класса
 public class AuthController {
 
     // Внедряем в класс Service, чтобы делигировать ему бизнес-логику

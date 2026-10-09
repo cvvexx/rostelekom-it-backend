@@ -80,12 +80,12 @@ class AuthRegistrationIT {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register: пользователь создаётся в Keycloak и сохраняется в БД")
+    @DisplayName("POST /api/users/register: пользователь создаётся в Keycloak и сохраняется в БД")
     void register_success() throws Exception {
         UUID keycloakId = UUID.randomUUID();
         keycloakCreates(keycloakId);
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("  JohnDoe ", " John ", " Doe ", "secret123")))
                 .andExpect(status().isOk())
@@ -102,9 +102,9 @@ class AuthRegistrationIT {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register: невалидное тело — 400, ни Keycloak, ни БД не затронуты")
+    @DisplayName("POST /api/users/register: невалидное тело — 400, ни Keycloak, ни БД не затронуты")
     void register_invalidBody_returns400() throws Exception {
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("", "John", "Doe", "secret123")))
                 .andExpect(status().isBadRequest());
@@ -114,11 +114,11 @@ class AuthRegistrationIT {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register: Keycloak вернул 409 — ответ 409, в БД пусто")
+    @DisplayName("POST /api/users/register: Keycloak вернул 409 — ответ 409, в БД пусто")
     void register_keycloakConflict_returns409() throws Exception {
         when(keycloakResponse.getStatus()).thenReturn(409);
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("johndoe", "John", "Doe", "secret123")))
                 .andExpect(status().isConflict());
@@ -127,7 +127,7 @@ class AuthRegistrationIT {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register: сбой записи в БД — пользователь удаляется из Keycloak")
+    @DisplayName("POST /api/users/register: сбой записи в БД — пользователь удаляется из Keycloak")
     void register_dbFailure_rollsBackKeycloakUser() throws Exception {
         // В БД уже есть пользователь с таким username, поэтому saveAndFlush
         // в сервисе упадёт на unique-ограничении
@@ -139,7 +139,7 @@ class AuthRegistrationIT {
 
         // Если есть общий @ExceptionHandler(Exception.class), замените на
         // perform(...).andExpect(status().isInternalServerError())
-        assertThatThrownBy(() -> mockMvc.perform(post("/api/auth/register")
+        assertThatThrownBy(() -> mockMvc.perform(post("/api/users/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body("johndoe", "John", "Doe", "secret123"))))
                 .hasCauseInstanceOf(DataIntegrityViolationException.class);
