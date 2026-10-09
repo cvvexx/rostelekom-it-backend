@@ -1,9 +1,9 @@
-package io.cvvexxx.controller;
+package io.cvvexxx.users.controller;
 
 
-import io.cvvexxx.dto.CreatedUserDto;
-import io.cvvexxx.dto.NewUserDto;
-import io.cvvexxx.service.DefaultUserService;
+import io.cvvexxx.users.dto.CreatedUserDto;
+import io.cvvexxx.users.dto.NewUserDto;
+import io.cvvexxx.users.service.DefaultUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

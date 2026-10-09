@@ -1,4 +1,4 @@
-package io.cvvexxx.dto;
+package io.cvvexxx.users.dto;
 
 import java.util.UUID;
 

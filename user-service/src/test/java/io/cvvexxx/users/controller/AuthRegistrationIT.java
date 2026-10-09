@@ -1,7 +1,7 @@
-package io.cvvexxx.controller;
+package io.cvvexxx.users.controller;
 
-import io.cvvexxx.entity.User;
-import io.cvvexxx.repository.UserRepository;
+import io.cvvexxx.users.entity.User;
+import io.cvvexxx.users.repository.UserRepository;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

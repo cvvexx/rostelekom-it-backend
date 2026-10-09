@@ -1,10 +1,10 @@
-package io.cvvexxx.service;
+package io.cvvexxx.users.service;
 
-import io.cvvexxx.dto.CreatedUserDto;
-import io.cvvexxx.dto.NewUserDto;
-import io.cvvexxx.entity.User;
-import io.cvvexxx.exception.FieldAlreadyExistsException;
-import io.cvvexxx.repository.UserRepository;
+import io.cvvexxx.users.dto.CreatedUserDto;
+import io.cvvexxx.users.dto.NewUserDto;
+import io.cvvexxx.users.entity.User;
+import io.cvvexxx.users.exception.FieldAlreadyExistsException;
+import io.cvvexxx.users.repository.UserRepository;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

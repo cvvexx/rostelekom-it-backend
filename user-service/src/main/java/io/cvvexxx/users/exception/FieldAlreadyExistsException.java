@@ -1,4 +1,4 @@
-package io.cvvexxx.exception;
+package io.cvvexxx.users.exception;
 
 import lombok.Getter;
 

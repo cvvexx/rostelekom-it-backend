@@ -1,4 +1,4 @@
-package io.cvvexxx.entity;
+package io.cvvexxx.users.entity;
 
 
 import jakarta.persistence.*;

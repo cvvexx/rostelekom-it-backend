@@ -1,4 +1,4 @@
-package io.cvvexxx.config;
+package io.cvvexxx.users.config;
 
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;

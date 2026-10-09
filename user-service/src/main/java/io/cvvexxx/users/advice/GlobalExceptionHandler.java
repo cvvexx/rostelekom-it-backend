@@ -1,6 +1,6 @@
-package io.cvvexxx.advice;
+package io.cvvexxx.users.advice;
 
-import io.cvvexxx.exception.FieldAlreadyExistsException;
+import io.cvvexxx.users.exception.FieldAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -1,4 +1,4 @@
-package io.cvvexxx.dto;
+package io.cvvexxx.users.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
