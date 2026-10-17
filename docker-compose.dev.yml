@@ -1,14 +1,4 @@
 services:
-
-  auth_db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: auth
-      POSTGRES_USER: auth
-      POSTGRES_PASSWORD: auth
-    ports: [ "5433:5432" ]
-
-  # Хранилище одноразовых кодов для входа по SMS (нативный TTL)
   redis:
     image: redis:7
     container_name: rostelekom_redis
