@@ -16,7 +16,6 @@
 	<modules>
 		<module>user-service</module>
 		<module>gateway-service</module>
-		<module>auth-service</module>
 	</modules>
 
 	<properties>
@@ -29,6 +28,19 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- По умолчанию surefire берёт только *Test/*Tests, поэтому интеграционные
+					     тесты с суффиксом IT молча не запускались. Добавляем их явно -->
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+						<include>**/*IT.java</include>
+					</includes>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

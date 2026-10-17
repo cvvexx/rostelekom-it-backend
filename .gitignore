@@ -18,6 +18,7 @@ target/
 .env.prod
 .env
 .env.dev
+.claude
 /graphify-out/
 *.iws
 *.iml
