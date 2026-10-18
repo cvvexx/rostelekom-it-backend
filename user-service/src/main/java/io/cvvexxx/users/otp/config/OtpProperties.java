@@ -5,6 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 //Достает проперти с префиксом из .properties файла
+//Аналог pydantic BaseSettings с префиксом: app.otp.resend-cooldown=60s из .properties -> поле resendCooldown,
+//строки типа 60s, 5m сами конвертируются в Duration
 @ConfigurationProperties(prefix = "app.otp")
 public record OtpProperties(
         int length,

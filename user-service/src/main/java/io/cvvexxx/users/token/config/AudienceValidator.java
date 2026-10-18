@@ -7,7 +7,7 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 //Пропускает только если у токена соответствующее поле aud
-@RequiredArgsConstructor
+@RequiredArgsConstructor //Lombok: конструктор из final-полей (audience)
 public class AudienceValidator implements OAuth2TokenValidator<Jwt> {
 
     private final String audience;

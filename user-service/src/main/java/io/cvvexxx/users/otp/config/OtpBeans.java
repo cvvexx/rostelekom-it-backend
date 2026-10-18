@@ -12,21 +12,21 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-@Configuration//Класс конфигурации, в котором создаем кастомные бины
-@EnableConfigurationProperties(OtpProperties.class)
+@Configuration//Класс конфигурации, в котором создаем кастомные бины(через методы с @Bean)
+@EnableConfigurationProperties(OtpProperties.class) //Регистрирует OtpProperties как бин, чтобы его можно было внедрять (DefaultOtpService)
 public class OtpBeans {
 
     //Смотрит поле app.otp.store, по дефолту создает RedisOtpStore
     //Сделано для того, чтобы можно было поменять реализацию хранилища токенов без переписывания половины проекта
     @Bean
-    @ConditionalOnProperty(name = "app.otp.store", havingValue = "redis", matchIfMissing = true)
+    @ConditionalOnProperty(name = "app.otp.store", havingValue = "redis", matchIfMissing = true) //if settings.otp_store == "redis" или не задано
     public OtpStore redisOtpStore(StringRedisTemplate stringRedisTemplate) {
         return new RedisOtpStore(stringRedisTemplate);
     }
 
     //Создает inMemory хранилище(для тестов)
     @Bean
-    @ConditionalOnProperty(name = "app.otp.store", havingValue = "memory")
+    @ConditionalOnProperty(name = "app.otp.store", havingValue = "memory") //Создается только при app.otp.store=memory
     public OtpStore inMemoryOtpStore() {
         return new InMemoryOtpStore();
     }

@@ -16,12 +16,17 @@ import java.util.UUID;
 @Repository // Аналогично @Service и @RestController создает бин
 public interface UserRepository extends JpaRepository<User, UUID> {
 
+    //Spring Data сам генерит запрос по имени метода: findByPhone -> select ... where phone = ?,
+    //existsByUsername -> проверка есть ли запись с таким username
     Optional<User> findByPhone(String phone);
 
     boolean existsByUsername(String username);
 
     // Атомарное "создать, если нет": при гонке двух потоков с одним телефоном второй INSERT дождётся
     // коммита первого и просто ничего не вставит (вернёт 0) вместо ошибки unique-констрейнта.
+    //@Modifying - запрос меняет данные, без нее Spring ждет select и упадет
+    //nativeQuery = true - это обычный SQL под Postgres (как session.execute(text(...))), а не JPQL
+    //@Param("id") - подставляет аргумент метода вместо :id в запросе
     @Modifying
     @Query(value = """
             insert into users (id, phone, created_at, updated_at)

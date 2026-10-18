@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor //Lombok: конструктор из final-полей (redis)
 public class RedisOtpStore implements OtpStore {
 
     private static final String CODE_KEY_PREFIX = "otp:code:";

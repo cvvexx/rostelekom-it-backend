@@ -14,9 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
+@Service //Бин с бизнес-логикой: Spring создаст один объект и подставит его в AuthController через конструктор
+@RequiredArgsConstructor //Конструктор из final-полей, через него Spring передает OtpService, UserService, TokenService
+@Slf4j //Создает поле log
 public class DefaultAuthService implements AuthService {
 
     private final OtpService otpService;
@@ -32,7 +32,7 @@ public class DefaultAuthService implements AuthService {
     }
 
     @Override
-    @Transactional//Открываем транзакцию в бд
+    @Transactional//Открываем транзакцию в бд (как async with session.begin()), при RuntimeException будет rollback
     public TokenPairDto verifyOtp(OtpVerifyDto dto) {
         String phone = PhoneNumbersUtils.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
         otpService.verifyCode(phone, dto.code());//Верифицируем код, если чето не так -> выбрасываем exception и завершаем работу метода

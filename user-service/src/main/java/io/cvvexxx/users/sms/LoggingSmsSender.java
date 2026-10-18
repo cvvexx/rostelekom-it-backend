@@ -3,7 +3,7 @@ package io.cvvexxx.users.sms;
 import io.cvvexxx.users.phone.PhoneNumbersUtils;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+@Slf4j //Создает поле log
 public class LoggingSmsSender implements SmsSender {
 
     @Override

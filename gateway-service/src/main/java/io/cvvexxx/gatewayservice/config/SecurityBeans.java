@@ -13,9 +13,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
-@Configuration
+@Configuration //Класс-конфиг: при старте Spring вызовет все @Bean-методы внутри и сохранит их результаты
 public class SecurityBeans {
 
+    //@Bean - метод-фабрика: Spring вызывает его один раз при старте, кладет результат в контейнер и подставляет
+    //туда, где этот тип нужен (как функция для Depends() в FastAPI, только объект один на все приложение).
+    //Параметры метода (HttpSecurity, обработчики ниже) Spring тоже находит и подставляет сам
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -48,13 +51,14 @@ public class SecurityBeans {
                 .build();
     }
 
-    @Bean
+    @Bean //Обработчик 401, Spring сам подставит его в securityFilterChain выше
     public AuthenticationEntryPoint authenticationEntryPoint(
+            //Бинов типа HandlerExceptionResolver в Spring несколько, поэтому через @Qualifier явно говорим, какой взять(по имени)
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
         return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
     }
 
-    @Bean
+    @Bean //Обработчик 403, аналогично тому, что сверху
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
         return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);

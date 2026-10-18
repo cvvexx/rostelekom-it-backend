@@ -17,20 +17,22 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 //Контроллер user'ов
-@RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/users")
+@RestController //Класс с эндпоинтами, аналог APIRouter
+@RequiredArgsConstructor //Через конструктор приходит UserService
+@RequestMapping("/api/users") //Префикс всех эндпоинтов, как APIRouter(prefix="/api/users")
 public class UserController {
 
     private final UserService userService;
 
     //Получение юзера по токену
-    @GetMapping("/me")
+    //@AuthenticationPrincipal - достает уже проверенный Spring Security токен текущего юзера,
+    //аналог current_user = Depends(get_current_user) в FastAPI
+    @GetMapping("/me") //GET /api/users/me, как @router.get("/me")
     public ResponseEntity<UserProfileDto> me(@AuthenticationPrincipal Jwt jwt) {//Получаем токен из контекста безопасности
         return ResponseEntity.ok(userService.getProfile(currentUserId(jwt)));
     }
 
-    @PatchMapping("/me")
+    @PatchMapping("/me") //PATCH /api/users/me, как @router.patch("/me"). Про @RequestBody @Valid см. AuthController
     public ResponseEntity<UserProfileDto> updateMe(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid UpdateProfileDto dto

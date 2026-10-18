@@ -13,14 +13,17 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
+@Repository //Бин для работы с БД, реализацию интерфейса Spring Data генерирует сам
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 
     //Блокируем строку, чтобы не получилось так, что два запроса придут одновременно
     //и у нас будет два разных рефреш токена для одного юзера, чтобы недопустимо
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Lock(LockModeType.PESSIMISTIC_WRITE) //SELECT ... FOR UPDATE (в SQLAlchemy .with_for_update())
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    //@Modifying - запрос меняет данные (update/delete), без нее Spring ждет select и упадет
+    //@Query - свой запрос на JPQL: пишем по классам и полям (RefreshToken, t.user.id), а не по таблицам и колонкам
+    //@Param("userId") - подставляет аргумент метода вместо :userId в запросе
     @Modifying
     @Query("""
             update RefreshToken t

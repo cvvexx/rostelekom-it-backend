@@ -38,9 +38,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 
 //Класс конфигурации в котором создаются бины для токенов
-@Configuration
-@EnableConfigurationProperties(JwtProperties.class)
-@Slf4j
+@Configuration //Класс-конфиг с @Bean-методами
+@EnableConfigurationProperties(JwtProperties.class) //Регистрирует JwtProperties как бин, чтобы его можно было внедрять
+@Slf4j //Создает поле log
 public class TokenBeans {
 
     private static final int GENERATED_KEY_SIZE = 2048;
@@ -64,12 +64,12 @@ public class TokenBeans {
         return new ImmutableJWKSet<>(new JWKSet(rsaKey));
     }
 
-    @Bean
+    @Bean //Кодировщик, им DefaultTokenService подписывает access-токены
     public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
         return new NimbusJwtEncoder(jwkSource);
     }
 
-    @Bean
+    @Bean //Декодер, им Spring Security проверяет подпись, issuer и aud у входящих токенов
     public JwtDecoder jwtDecoder(RSAKey rsaKey, JwtProperties properties) {
         RSAPublicKey publicKey;
         try {

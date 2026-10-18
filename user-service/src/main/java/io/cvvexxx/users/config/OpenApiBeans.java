@@ -9,12 +9,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 //Настройка Swagger: UI доступен по /swagger-ui.html, спека по /v3/api-docs
-@Configuration
+@Configuration //Класс с настройками, внутри @Bean-методы
 public class OpenApiBeans {
 
     public static final String BEARER_AUTH = "bearerAuth";
 
-    @Bean
+    @Bean //Spring вызовет метод при старте и отдаст результат springdoc'у (в FastAPI это FastAPI(title=..., version=...))
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()

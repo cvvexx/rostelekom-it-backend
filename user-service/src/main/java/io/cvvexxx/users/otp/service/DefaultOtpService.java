@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.Duration;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
+@Service //Бин, Spring создаст один объект и подставит его в DefaultAuthService
+@RequiredArgsConstructor //Через конструктор приходят OtpStore, SmsSender, OtpProperties (те, что из OtpBeans)
+@Slf4j //Создает поле log
 public class DefaultOtpService implements OtpService {
 
     private static final String SMS_TEMPLATE = "Код для входа: %s. Никому его не сообщайте.";

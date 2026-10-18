@@ -2,7 +2,7 @@ package io.cvvexxx.users.otp.exception;
 
 import lombok.Getter;
 
-@Getter
+@Getter //Lombok: генерирует геттеры getReason(), getAttemptsLeft()
 public class InvalidOtpException extends RuntimeException {
 
     public enum Reason {

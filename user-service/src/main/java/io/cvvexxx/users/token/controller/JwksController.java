@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 //Контроллер для проверки подлинности токена(используется другими сервисами)
-@RestController
-@RequiredArgsConstructor
+@RestController //Класс с эндпоинтами, аналог APIRouter
+@RequiredArgsConstructor //Через конструктор приходит бин RSAKey из TokenBeans
 @SecurityRequirements //Публичный эндпоинт, в Swagger без замка
 public class JwksController {
 
     private final RSAKey rsaKey;
 
-    @GetMapping("/.well-known/jwks.json")
+    @GetMapping("/.well-known/jwks.json") //Как @router.get(...), Map в ответе превращается в JSON как dict в FastAPI
     public Map<String, Object> jwks() {
         return new JWKSet(rsaKey.toPublicJWK()).toJSONObject();
     }

@@ -11,7 +11,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor //Lombok: конструктор из final-полей (handlerExceptionResolver)
 public class ProblemDetailAccessDeniedHandler implements AccessDeniedHandler {
 
     private final AccessDeniedHandler bearerAccessDeniedHandler = new BearerTokenAccessDeniedHandler();

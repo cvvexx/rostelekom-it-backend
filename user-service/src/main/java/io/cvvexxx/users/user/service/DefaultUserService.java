@@ -18,22 +18,22 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
-@RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля
-@Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе
+@RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля, через него Spring внедряет зависимости (как Depends() в FastAPI)
+@Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе (как log = logging.getLogger(__name__))
 public class DefaultUserService implements UserService {
 
     // Внедряем Repository, чтобы делегировать ему работу с базой данных
     private final UserRepository userRepository;
 
     @Override
-    @Transactional
+    @Transactional //Весь метод в одной транзакции (как async with session.begin()), при RuntimeException будет rollback
     public User findOrCreateByPhone(String phone) {
         return userRepository.findByPhone(phone)//Ищем юзера в бд, если находим, то возвращаем
                 .orElseGet(() -> createUser(phone));//Иначе создаем его
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true) //Транзакция только на чтение, Hibernate не отслеживает изменения - чуть быстрее
     public UserProfileDto getProfile(UUID userId) {
         return toDto(requireUser(userId));//мапим в дто полученного из бд юзера
     }

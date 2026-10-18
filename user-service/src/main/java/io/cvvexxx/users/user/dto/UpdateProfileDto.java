@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Size;
 
 //DTO для обновления информации о юзере
 public record UpdateProfileDto(
+        //@Size пропускает null, т.е. поле можно не передавать (как Field(None, min_length=3, max_length=20))
         @Size(min = 3, max = 20, message = "Username должен быть от 3 до 20 символов")
         String username,
 

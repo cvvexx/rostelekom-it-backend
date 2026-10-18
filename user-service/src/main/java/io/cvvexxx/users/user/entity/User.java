@@ -15,18 +15,18 @@ import java.util.Set;
 import java.util.UUID;
 
 //Сущность которая мапится на таблицу в бд (ORM маппинг)
-@Entity //Аннотация, обозначающая, что класс - сущность
+@Entity //Аннотация, обозначающая, что класс - сущность (как модель SQLAlchemy: class User(Base))
 @Getter //Lombok аннотация, генерирующая Геттеры
 @Setter //Аналогично тому, что выше
 @AllArgsConstructor //Lombok аннотация, генерирующая конструктор со всеми полями
 @NoArgsConstructor //Аналогично тому, что выше
-@Builder
-@Table(name = "users") //Аннотация, которая показывает, на какую таблицу мапится класс
+@Builder //Lombok: User.builder().phone(p).build(), как User(phone=p)
+@Table(name = "users") //Аннотация, которая показывает, на какую таблицу мапится класс (как __tablename__)
 public class User {
 
     //Аннотация, которая обозначает, что поле - Primary Key в таблице
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.UUID) //id генерится сам при сохранении, как default=uuid.uuid4
     private UUID id;
 
     @Column(nullable = false, unique = true, length = 20)
@@ -43,18 +43,19 @@ public class User {
     @Column(name = "last_name", length = 100)
     private String lastName;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    //Роли лежат в отдельной таблице user_roles(user_id, role), а в Java это просто Set<Role>
+    @ElementCollection(fetch = FetchType.EAGER) //Коллекция простых значений, не сущностей. EAGER - роли грузятся сразу вместе с юзером
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id")) //Таблица и колонка связи с users
     @Column(name = "role", nullable = false, length = 32)
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
+    @Enumerated(EnumType.STRING) //Хранить enum строкой "USER", а не номером 0
+    @Builder.Default //Чтобы при builder() поле не стало null, а взялось EnumSet.of(Role.USER)
     private Set<Role> roles = EnumSet.of(Role.USER);
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @CreationTimestamp
+    @CreationTimestamp //Hibernate сам ставит время создания, как server_default=func.now()
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    @UpdateTimestamp
+    @UpdateTimestamp //Сам обновляет время при каждом изменении, как onupdate=func.now()
     private Instant updatedAt;
 }

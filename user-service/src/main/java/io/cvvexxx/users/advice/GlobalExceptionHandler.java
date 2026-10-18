@@ -22,10 +22,12 @@ import java.util.stream.Collectors;
 
 //Обработчик ошибок, который перехватывает ошибки, выброшенные в рантайме
 // и возвращает понятный JSON объект с описанием проблемы
-@RestControllerAdvice
+@RestControllerAdvice //В FastAPI это как набор @app.exception_handler(...), работает сразу для всех контроллеров
 public class GlobalExceptionHandler {
 
     //Ошибка создания юзера, нарушение уникальности username, номера и т.п. уникальных полей
+    //@ExceptionHandler(X.class) - аналог @app.exception_handler(X): если X вылетел в любом контроллере/сервисе,
+    //Spring вызовет этот метод, а то что он вернет уйдет клиенту
     @ExceptionHandler(FieldAlreadyExistsException.class)
     public ProblemDetail handleFieldAlreadyExists(FieldAlreadyExistsException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
@@ -89,6 +91,7 @@ public class GlobalExceptionHandler {
     }
 
     //Ошибка валидации входных данных
+    //Сюда попадают ошибки @Valid (@NotBlank, @Size и т.д. в DTO), аналог RequestValidationError в FastAPI, только отдаем 400, а не 422
     @ExceptionHandler(BindException.class)
     public ProblemDetail handleBindException(BindException e) {
         Map<String, String> errors = e.getFieldErrors().stream()

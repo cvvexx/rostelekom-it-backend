@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-@RestController
+@RestController //Класс с эндпоинтами, все что возвращают методы отдается как JSON. Аналог APIRouter в FastAPI
 public class FallbackController {
 
-    @RequestMapping("/fallback/users")
+    @RequestMapping("/fallback/users") //Без указания метода ловит любой HTTP-метод, как @router.api_route("/fallback/users")
     public ResponseEntity<Map<String, String>> usersServiceFallback() {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(

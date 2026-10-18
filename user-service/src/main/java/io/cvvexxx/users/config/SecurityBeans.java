@@ -18,11 +18,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Configuration
+@Configuration //Класс-конфиг: при старте Spring вызовет все @Bean-методы внутри и сохранит их результаты
 public class SecurityBeans {
 
     //Основной бин конфигурации для Spring Security, определяет цепочку фильтров, которые проходит запрос перед тем,
     //как дойти до самого контроллера
+    //@Bean - Spring вызывает метод один раз при старте и подставляет результат туда, где этот тип нужен
+    //(как функция для Depends() в FastAPI, только объект один на все приложение). Параметры метода подставляет сам
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    AuthenticationEntryPoint authenticationEntryPoint,
@@ -60,6 +62,7 @@ public class SecurityBeans {
     //Создаем обработчик ошибки 401
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
+            //Бинов типа HandlerExceptionResolver в Spring несколько, поэтому через @Qualifier явно говорим, какой взять(по имени)
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
         return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
     }
@@ -72,6 +75,8 @@ public class SecurityBeans {
     }
 
     //Конвертер JWT в роли
+    //Вызов jwtAuthenticationConverter() в securityFilterChain вернет этот же бин, а не создаст новый -
+    //Spring перехватывает вызовы @Bean-методов внутри @Configuration
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         var converter = new JwtAuthenticationConverter();

@@ -27,9 +27,9 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
+@Service //Бин, Spring создаст один объект и подставит его в DefaultAuthService
+@RequiredArgsConstructor //Через конструктор приходят JwtEncoder, JwtProperties, RefreshTokenRepository
+@Slf4j //Создает поле log
 public class DefaultTokenService implements TokenService {
 
     private static final int REFRESH_TOKEN_BYTES = 32;
@@ -40,7 +40,7 @@ public class DefaultTokenService implements TokenService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
-    @Transactional
+    @Transactional //Сохранение refresh-токена в БД идет в транзакции
     public TokenPairDto issueTokens(User user) {
         Instant now = Instant.now();//Получаем текущее время
 
@@ -92,6 +92,8 @@ public class DefaultTokenService implements TokenService {
     }
 
     @Override
+    //Изменение revokedAt сохранится в БД само при коммите транзакции, без явного save() -
+    //Hibernate отслеживает изменения загруженных сущностей (похоже на session в SQLAlchemy)
     @Transactional
     public void revoke(String refreshToken) {
         refreshTokenRepository.findByTokenHash(hash(refreshToken))

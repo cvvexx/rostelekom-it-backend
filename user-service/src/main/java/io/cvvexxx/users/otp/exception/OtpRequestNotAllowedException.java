@@ -4,7 +4,7 @@ import lombok.Getter;
 
 import java.time.Duration;
 
-@Getter
+@Getter //Lombok: генерирует геттер getRetryAfter()
 public class OtpRequestNotAllowedException extends RuntimeException {
 
     private final Duration retryAfter;

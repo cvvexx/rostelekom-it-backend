@@ -7,9 +7,9 @@ import org.springframework.validation.annotation.Validated;
 import java.time.Duration;
 
 @Validated//Приложение не запуститься, если не пройдет валидация(@NotBlank над issuer)
-@ConfigurationProperties(prefix = "app.jwt")
+@ConfigurationProperties(prefix = "app.jwt") //Читает app.jwt.* из .properties, как pydantic BaseSettings
 public record JwtProperties(
-        @NotBlank
+        @NotBlank //Обязательное поле в конфиге
         String issuer,
         String audience,
 

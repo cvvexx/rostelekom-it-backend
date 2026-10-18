@@ -3,7 +3,7 @@ package io.cvvexxx.users.user.exception;
 import lombok.Getter;
 
 //Кастомный Exception, чтобы было проще обрабатывать ошибки
-@Getter
+@Getter //Lombok: генерирует геттеры для полей
 public class FieldAlreadyExistsException extends RuntimeException {
 
     private final String fieldName;
