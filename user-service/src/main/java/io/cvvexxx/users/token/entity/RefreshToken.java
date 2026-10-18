@@ -11,6 +11,7 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+//Сущность для базы данных, чтобы хранить токены в PostgreSQL а не в редисе
 @Entity
 @Getter
 @Setter

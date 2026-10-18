@@ -57,6 +57,8 @@ public class DefaultTokenService implements TokenService {
     }
 
     @Override
+    //noRollbackFor стоит для того, чтобы если токен перехватил злоумышленник, то у нас записались данные в бд
+    //и не откатились из-за выброшенного исключения
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public TokenPairDto refresh(String refreshToken) {
         Instant now = Instant.now();
@@ -64,10 +66,12 @@ public class DefaultTokenService implements TokenService {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(refreshToken))
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is unknown"));
 
+        //Если токен был отменен до этого, то значит что использует уже отключенный токен ->
+        //значит токен получил злоумышленник, в таком случае в целях безопасности завершаем все сессии юзера
         if (stored.getRevokedAt() != null) {
             log.warn("Reuse of a revoked refresh token detected for user {}, revoking all sessions",
                     stored.getUser().getId());
-            refreshTokenRepository.revokeAllByUserId(stored.getUser().getId(), now);
+            refreshTokenRepository.revokeAllByUserId(stored.getUser().getId(), now);//завершаем все сессии юзера
             throw new InvalidRefreshTokenException("Refresh token has been revoked");
         }
 
@@ -75,7 +79,7 @@ public class DefaultTokenService implements TokenService {
             throw new InvalidRefreshTokenException("Refresh token has expired");
         }
 
-        stored.setRevokedAt(now);
+        stored.setRevokedAt(now);//Ставим что токен уже отозван и мы поменяли его на новый
 
         User user = stored.getUser();
         return new TokenPairDto(
@@ -92,7 +96,7 @@ public class DefaultTokenService implements TokenService {
     public void revoke(String refreshToken) {
         refreshTokenRepository.findByTokenHash(hash(refreshToken))
                 .filter(token -> token.getRevokedAt() == null)
-                .ifPresent(token -> token.setRevokedAt(Instant.now()));
+                .ifPresent(token -> token.setRevokedAt(Instant.now()));//Отзываем refresh токен при logout'е
     }
 
     private String buildAccessToken(User user, Instant now) {

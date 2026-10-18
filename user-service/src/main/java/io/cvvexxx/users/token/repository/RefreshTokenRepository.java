@@ -16,6 +16,8 @@ import java.util.UUID;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 
+    //Блокируем строку, чтобы не получилось так, что два запроса придут одновременно
+    //и у нас будет два разных рефреш токена для одного юзера, чтобы недопустимо
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 

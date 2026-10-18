@@ -37,6 +37,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 
+//Класс конфигурации в котором создаются бины для токенов
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
 @Slf4j
@@ -44,6 +45,7 @@ public class TokenBeans {
 
     private static final int GENERATED_KEY_SIZE = 2048;
 
+    //Ключ подписи токена, для проверки валидности
     @Bean
     public RSAKey rsaKey(JwtProperties properties, ResourceLoader resourceLoader) {
         RSAPrivateKey privateKey = loadOrGeneratePrivateKey(properties, resourceLoader);
@@ -56,6 +58,7 @@ public class TokenBeans {
                 .build();
     }
 
+    //Бин для проверки подлинности токенов
     @Bean
     public JWKSource<SecurityContext> jwkSource(RSAKey rsaKey) {
         return new ImmutableJWKSet<>(new JWKSet(rsaKey));
@@ -89,7 +92,7 @@ public class TokenBeans {
     private RSAPrivateKey loadOrGeneratePrivateKey(JwtProperties properties, ResourceLoader resourceLoader) {
         String location = properties.privateKeyLocation();
 
-        if (location == null || location.isBlank()) {
+        if (location == null || location.isBlank()) {//TODO(Сделать один приватный ключ токенов и убрать его в .env)
             log.warn("app.jwt.private-key-location is not set, generating an ephemeral RSA key pair. "
                     + "All issued access tokens become invalid after restart. Do not use this in production.");
             return (RSAPrivateKey) generateKeyPair().getPrivate();

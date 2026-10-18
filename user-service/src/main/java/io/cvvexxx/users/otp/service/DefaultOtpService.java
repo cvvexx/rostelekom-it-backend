@@ -6,7 +6,7 @@ import io.cvvexxx.users.otp.exception.InvalidOtpException;
 import io.cvvexxx.users.otp.exception.OtpRequestNotAllowedException;
 import io.cvvexxx.users.otp.store.OtpStore;
 import io.cvvexxx.users.otp.store.OtpVerification;
-import io.cvvexxx.users.phone.PhoneNumbers;
+import io.cvvexxx.users.phone.PhoneNumbersUtils;
 import io.cvvexxx.users.sms.SmsSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +29,9 @@ public class DefaultOtpService implements OtpService {
 
     @Override
     public OtpChallengeDto requestCode(String normalizedPhone) {
-        //Т.к. код одноразовый то тут мы проверяем, был ли код уже в редис, чтобы не слать новый код
-        //Пока у старого до сих пор не истек TTL
+        //Проверяем, прошло ли 60 секунд с предыдущего запроса
+        //В редисе лежит телефон и у него стоит TTL 60 секунд, т.е. если в редисе до сих пор есть
+        //этот номер телефона, то 60 секеунд с предыдущего запроса не прошло -> юзеру возвращается ошибка
         if (!otpStore.tryAcquireSendPermit(normalizedPhone, properties.resendCooldown())) {
             Duration retryAfter = otpStore.sendPermitTimeToLive(normalizedPhone);//Смотрим TTL по ключу
             //Возвращаем сообщение об ошибке
@@ -54,7 +55,7 @@ public class DefaultOtpService implements OtpService {
         //Задел под будущую реализацию SMS кодов, сейчас используется просто логирование(LoggingSmsSender)
         smsSender.send(normalizedPhone, SMS_TEMPLATE.formatted(code));
 
-        log.info("OTP issued for phone {}", PhoneNumbers.mask(normalizedPhone));
+        log.info("OTP issued for phone {}", PhoneNumbersUtils.mask(normalizedPhone));
 
         //(Временно) возвращаем телефон + код, (НА ПРОДЕ СДЕЛАТЬ 204?)
         return new OtpChallengeDto(

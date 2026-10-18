@@ -2,6 +2,7 @@ package io.cvvexxx.users.token.dto;
 
 import java.util.UUID;
 
+//Dto для выдачи токенов юзерам
 public record TokenPairDto(
         String accessToken,
         String refreshToken,

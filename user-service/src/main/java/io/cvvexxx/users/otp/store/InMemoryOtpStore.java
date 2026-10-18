@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+//InMemory-хранилище для тестов
 public class InMemoryOtpStore implements OtpStore {
 
     private record Permit(Instant expiresAt) {

@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class PhoneNumbersTest {
+class PhoneNumbersUtilsTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -22,7 +22,7 @@ class PhoneNumbersTest {
     })
     @DisplayName("normalize: любой формат российского номера приводится к +79991234567")
     void normalize_variousFormats_produceSameCanonicalNumber(String raw) {
-        assertThat(PhoneNumbers.normalize(raw)).isEqualTo("+79991234567");
+        assertThat(PhoneNumbersUtils.normalize(raw)).isEqualTo("+79991234567");
     }
 
     @ParameterizedTest
@@ -30,13 +30,13 @@ class PhoneNumbersTest {
     @ValueSource(strings = {"   ", "123", "+1234567890123456", "abc"})
     @DisplayName("normalize: некорректный номер — InvalidPhoneNumberException")
     void normalize_invalidInput_throws(String raw) {
-        assertThatThrownBy(() -> PhoneNumbers.normalize(raw))
+        assertThatThrownBy(() -> PhoneNumbersUtils.normalize(raw))
                 .isInstanceOf(InvalidPhoneNumberException.class);
     }
 
     @Test
     @DisplayName("mask: в логи уходит только начало и конец номера")
     void mask_hidesMiddleOfNumber() {
-        assertThat(PhoneNumbers.mask("+79991234567")).isEqualTo("+7999***4567");
+        assertThat(PhoneNumbersUtils.mask("+79991234567")).isEqualTo("+7999***4567");
     }
 }

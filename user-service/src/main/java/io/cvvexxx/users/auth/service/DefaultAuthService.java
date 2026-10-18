@@ -4,7 +4,7 @@ import io.cvvexxx.users.auth.dto.OtpRequestDto;
 import io.cvvexxx.users.auth.dto.OtpVerifyDto;
 import io.cvvexxx.users.otp.dto.OtpChallengeDto;
 import io.cvvexxx.users.otp.service.OtpService;
-import io.cvvexxx.users.phone.PhoneNumbers;
+import io.cvvexxx.users.phone.PhoneNumbersUtils;
 import io.cvvexxx.users.token.dto.TokenPairDto;
 import io.cvvexxx.users.token.service.TokenService;
 import io.cvvexxx.users.user.entity.User;
@@ -25,8 +25,8 @@ public class DefaultAuthService implements AuthService {
 
     @Override
     public OtpChallengeDto requestOtp(OtpRequestDto dto) {
-        String phone = PhoneNumbers.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
-        log.info("OTP requested for phone {}", PhoneNumbers.mask(phone));//Логируем для дебага, также скрываем часть номера
+        String phone = PhoneNumbersUtils.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
+        log.info("OTP requested for phone {}", PhoneNumbersUtils.mask(phone));//Логируем для дебага, также скрываем часть номера
 
         return otpService.requestCode(phone);
     }
@@ -34,11 +34,11 @@ public class DefaultAuthService implements AuthService {
     @Override
     @Transactional//Открываем транзакцию в бд
     public TokenPairDto verifyOtp(OtpVerifyDto dto) {
-        String phone = PhoneNumbers.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
+        String phone = PhoneNumbersUtils.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
         otpService.verifyCode(phone, dto.code());//Верифицируем код, если чето не так -> выбрасываем exception и завершаем работу метода
 
         User user = userService.findOrCreateByPhone(phone);//Получаем/создаем юзера по номеру телефона
-        log.info("User {} authenticated by phone {}", user.getId(), PhoneNumbers.mask(phone));//Логируем вход юзера
+        log.info("User {} authenticated by phone {}", user.getId(), PhoneNumbersUtils.mask(phone));//Логируем вход юзера
 
         return tokenService.issueTokens(user);//Возвращаем токены для определенного юзера
     }

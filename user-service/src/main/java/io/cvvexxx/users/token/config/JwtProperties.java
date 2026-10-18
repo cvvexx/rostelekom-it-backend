@@ -6,7 +6,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
-@Validated
+@Validated//Приложение не запуститься, если не пройдет валидация(@NotBlank над issuer)
 @ConfigurationProperties(prefix = "app.jwt")
 public record JwtProperties(
         @NotBlank
@@ -23,7 +23,7 @@ public record JwtProperties(
 ) {
     public JwtProperties {
         if (audience == null || audience.isBlank()) {
-            audience = "rostelekom";
+            audience = "rostelekom";//TODO(убрать хардкод)
         }
         if (accessTokenTtl == null) {
             accessTokenTtl = Duration.ofMinutes(15);

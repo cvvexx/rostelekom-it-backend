@@ -16,6 +16,7 @@ public class RefreshTokenCleanupJob {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
+    //Раз в fixedDelayString просыпается этот метод и очищает все истекшие refresh токены
     @Scheduled(fixedDelayString = "${app.jwt.cleanup-interval:PT1H}")
     @Transactional
     public void deleteExpiredTokens() {

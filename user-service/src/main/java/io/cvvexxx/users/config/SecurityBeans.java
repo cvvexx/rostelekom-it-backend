@@ -10,8 +10,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.util.List;
@@ -40,30 +40,36 @@ public class SecurityBeans {
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtConfigurer ->
-                                //Конвертер достает роли из токена связывает их с ролями Spring Security
-                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2
+                                .jwt(jwtConfigurer ->
+                                        //Конвертер достает роли из токена связывает их с ролями Spring Security
+                                        jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())
+                                )
+                                .authenticationEntryPoint(authenticationEntryPoint)//При 401 вызывает обработчик ошибок, описанный ниже в @Bean
+                                .accessDeniedHandler(accessDeniedHandler))//Аналогично тому, что сверху
                 .exceptionHandling(
                         exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint)
                 )
                 .build();
     }
 
+
+    //Создаем обработчик ошибки 401
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
         return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
     }
 
+    //Создаем обработчик ошибки 403
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
         return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
     }
 
+    //Конвертер JWT в роли
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         var converter = new JwtAuthenticationConverter();

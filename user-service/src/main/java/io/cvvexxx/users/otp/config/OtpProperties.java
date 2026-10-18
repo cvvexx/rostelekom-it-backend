@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
+//Достает проперти с префиксом из .properties файла
 @ConfigurationProperties(prefix = "app.otp")
 public record OtpProperties(
         int length,

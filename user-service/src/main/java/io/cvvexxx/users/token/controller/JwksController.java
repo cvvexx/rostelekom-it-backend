@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+//Контроллер для проверки подлинности токена(используется другими сервисами)
 @RestController
 @RequiredArgsConstructor
 public class JwksController {

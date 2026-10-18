@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+//Контроллер user'ов
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/users")
@@ -23,8 +24,9 @@ public class UserController {
 
     private final UserService userService;
 
+    //Получение юзера по токену
     @GetMapping("/me")
-    public ResponseEntity<UserProfileDto> me(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<UserProfileDto> me(@AuthenticationPrincipal Jwt jwt) {//Получаем токен из контекста безопасности
         return ResponseEntity.ok(userService.getProfile(currentUserId(jwt)));
     }
 
@@ -37,6 +39,6 @@ public class UserController {
     }
 
     private UUID currentUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());//null быть не может, т.к. запрос до сюда не дойдет из-за HTTP 401
     }
 }

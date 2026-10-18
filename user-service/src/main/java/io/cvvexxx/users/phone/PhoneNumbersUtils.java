@@ -1,10 +1,11 @@
 package io.cvvexxx.users.phone;
 
-public final class PhoneNumbers {
+//Util класс для удобной работы с номерами телефонов(приведение к нормальному виду, маскировка для логов и тд)
+public final class PhoneNumbersUtils {
 
     private static final int RU_NATIONAL_LENGTH = 10;
 
-    private PhoneNumbers() {
+    private PhoneNumbersUtils() {
     }
 
     public static String normalize(String raw) {

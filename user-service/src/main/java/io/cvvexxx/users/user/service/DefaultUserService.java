@@ -35,16 +35,17 @@ public class DefaultUserService implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserProfileDto getProfile(UUID userId) {
-        return toDto(requireUser(userId));
+        return toDto(requireUser(userId));//мапим в дто полученного из бд юзера
     }
 
+    //Метод обновления профиля юзера
     @Override
     @Transactional
     public UserProfileDto updateProfile(UUID userId, UpdateProfileDto dto) {
         User user = requireUser(userId);
 
         if (dto.username() != null) {
-            String username = dto.username().trim().toLowerCase(Locale.ROOT);
+            String username = dto.username().trim().toLowerCase(Locale.ROOT);//Приводим username к нормальному виду
             if (!username.equals(user.getUsername()) && userRepository.existsByUsername(username)) {
                 throw new FieldAlreadyExistsException("username", username,
                         "User with username '%s' already exists".formatted(username));
@@ -81,6 +82,7 @@ public class DefaultUserService implements UserService {
                 .orElseThrow(() -> new IllegalStateException("User with phone was not created"));
     }
 
+    //Ищем юзера по id, иначе выбрасываем exception
     private User requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User %s not found".formatted(userId)));
