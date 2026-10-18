@@ -12,7 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumSet;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -28,8 +28,8 @@ public class DefaultUserService implements UserService {
     @Override
     @Transactional
     public User findOrCreateByPhone(String phone) {
-        return userRepository.findByPhone(phone)
-                .orElseGet(() -> createUser(phone));
+        return userRepository.findByPhone(phone)//Ищем юзера в бд, если находим, то возвращаем
+                .orElseGet(() -> createUser(phone));//Иначе создаем его
     }
 
     @Override
@@ -67,18 +67,18 @@ public class DefaultUserService implements UserService {
     }
 
     private User createUser(String phone) {
-        try {
-            User created = userRepository.saveAndFlush(User.builder()
-                    .phone(phone)
-                    .roles(EnumSet.of(Role.USER))
-                    .build());
-
-            log.info("Created user {} on first successful OTP verification", created.getId());
-            return created;
-        } catch (DataIntegrityViolationException e) {
-            log.debug("Concurrent user creation for the same phone, reading the existing one", e);
-            return userRepository.findByPhone(phone).orElseThrow(() -> e);
+        //Если два потока одновременно захотят создать юзера, то это здесь обрабатывается
+        UUID id = UUID.randomUUID();
+        //Атомарная операция, возвращает 1, если юзера создает, и 0, если конфликт и такой юзер уже есть
+        if (userRepository.insertIfAbsent(id, phone, Instant.now()) == 1) {
+            userRepository.insertRole(id, Role.USER.name());//Если юзер создан, то привязываем ему роль
+            log.info("Created user {} on first successful OTP verification", id);
+        } else {
+            log.debug("Concurrent user creation for the same phone, reading the existing one");
         }
+        //В любой случае читаем и возвращаем юзера
+        return userRepository.findByPhone(phone)
+                .orElseThrow(() -> new IllegalStateException("User with phone was not created"));
     }
 
     private User requireUser(UUID userId) {

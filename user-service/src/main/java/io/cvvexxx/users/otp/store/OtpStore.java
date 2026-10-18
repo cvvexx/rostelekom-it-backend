@@ -13,4 +13,6 @@ public interface OtpStore {
     Duration sendPermitTimeToLive(String phone);
 
     long incrementSendsInWindow(String phone, Duration window);
+
+    Duration sendsWindowTimeToLive(String phone);
 }

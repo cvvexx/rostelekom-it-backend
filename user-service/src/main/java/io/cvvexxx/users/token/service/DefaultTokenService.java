@@ -42,10 +42,10 @@ public class DefaultTokenService implements TokenService {
     @Override
     @Transactional
     public TokenPairDto issueTokens(User user) {
-        Instant now = Instant.now();
+        Instant now = Instant.now();//Получаем текущее время
 
-        String accessToken = buildAccessToken(user, now);
-        String refreshToken = buildRefreshToken(user, now);
+        String accessToken = buildAccessToken(user, now);//Создаем access токены
+        String refreshToken = buildRefreshToken(user, now);//Создаем refresh токен
 
         return new TokenPairDto(
                 accessToken,
@@ -97,16 +97,27 @@ public class DefaultTokenService implements TokenService {
 
     private String buildAccessToken(User user, Instant now) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
+                //ТОКЕН МОЖЕТЕ РАСПАРСИТЬ на сайте JWT.IO, чтобы посмотреть че в него входит
+
+                //Тот кто выпустил токен(user-service) в дев это localhost
                 .issuer(jwtProperties.issuer())
+                //Те, для кого выпускаются токены, ща rostelekom
                 .audience(List.of(jwtProperties.audience()))
+                //sub - айди юзера
                 .subject(user.getId().toString())
+                //Выпущен в
                 .issuedAt(now)
+                //Истекает в
                 .expiresAt(now.plus(jwtProperties.accessTokenTtl()))
+                //Уникальный id токена
                 .id(UUID.randomUUID().toString())
+                //Поле в токене, телефон юзера
                 .claim("phone", user.getPhone())
+                //Поле в токене, роли юзера списком
                 .claim("roles", user.getRoles().stream().map(Role::name).toList())
                 .build();
 
+        //Алгоритм подписи токена для его последующей проверки на подлинность
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
                 .keyId(jwtProperties.keyId())
                 .build();
@@ -119,9 +130,10 @@ public class DefaultTokenService implements TokenService {
         secureRandom.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
+        //Сохраняем токен в базу данных
         refreshTokenRepository.save(RefreshToken.builder()
                 .user(user)
-                .tokenHash(hash(token))
+                .tokenHash(hash(token))//Храним хэш токена в соображениях безопасности
                 .issuedAt(now)
                 .expiresAt(now.plus(jwtProperties.refreshTokenTtl()))
                 .build());
@@ -129,6 +141,7 @@ public class DefaultTokenService implements TokenService {
         return token;
     }
 
+    //Считает хэш для последующего сохранения в бд
     private String hash(String token) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));

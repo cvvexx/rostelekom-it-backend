@@ -29,26 +29,40 @@ public class DefaultOtpService implements OtpService {
 
     @Override
     public OtpChallengeDto requestCode(String normalizedPhone) {
+        //Т.к. код одноразовый то тут мы проверяем, был ли код уже в редис, чтобы не слать новый код
+        //Пока у старого до сих пор не истек TTL
         if (!otpStore.tryAcquireSendPermit(normalizedPhone, properties.resendCooldown())) {
-            Duration retryAfter = otpStore.sendPermitTimeToLive(normalizedPhone);
+            Duration retryAfter = otpStore.sendPermitTimeToLive(normalizedPhone);//Смотрим TTL по ключу
+            //Возвращаем сообщение об ошибке
             throw new OtpRequestNotAllowedException(retryAfter,
                     "Код уже отправлен, повторите через %d с".formatted(retryAfter.toSeconds()));
         }
-
+        //Увеличивает количество отправок кода в редисе за определенное окно(ща час времени)
+        //TODO(Сделать чтобы не было 2 запросов к редис)
         long sends = otpStore.incrementSendsInWindow(normalizedPhone, properties.window());
         if (sends > properties.maxSendsPerWindow()) {
-            throw new OtpRequestNotAllowedException(properties.window(),
+            //Если отправлено >5, то отклоняем запрос и
+            //отдаём реальный остаток окна, а не его полную длину
+            Duration retryAfter = otpStore.sendsWindowTimeToLive(normalizedPhone);
+            throw new OtpRequestNotAllowedException(retryAfter,
                     "Слишком много запросов кода, попробуйте позже");
         }
 
-        String code = generateCode();
-        otpStore.save(normalizedPhone, code, properties.ttl());
+        String code = generateCode(); //Генерируем смс код для входа
+        otpStore.save(normalizedPhone, code, properties.ttl());//Сохраняем код в редис
+
+        //Задел под будущую реализацию SMS кодов, сейчас используется просто логирование(LoggingSmsSender)
         smsSender.send(normalizedPhone, SMS_TEMPLATE.formatted(code));
 
         log.info("OTP issued for phone {}", PhoneNumbers.mask(normalizedPhone));
 
+        //(Временно) возвращаем телефон + код, (НА ПРОДЕ СДЕЛАТЬ 204?)
         return new OtpChallengeDto(
                 normalizedPhone,
+                //Задел под будущую отправку сообщений, если в .properties файле указано, что код возвращать не надо
+                //то в JSON ответа не будет кода, но я думаю, что надо будет возвращать http 204 и пустое тело
+                //к проду переделаю
+                //TODO
                 properties.exposeCode() ? code : null,
                 properties.ttl().toSeconds(),
                 properties.resendCooldown().toSeconds()
@@ -57,11 +71,13 @@ public class DefaultOtpService implements OtpService {
 
     @Override
     public void verifyCode(String normalizedPhone, String code) {
+        //Верифицируем код и получаем ответ в зависимости от входных данных
         OtpVerification verification = otpStore.verify(normalizedPhone, code, properties.maxAttempts());
 
         switch (verification.outcome()) {
-            case OK -> {
+            case OK -> { // Если все норм, то не выбрасываем exception, а идем дальше в вызывающем коде
             }
+            //Ниже соответственно ошибки, в зависимости от статуса
             case NOT_REQUESTED -> throw new InvalidOtpException(
                     InvalidOtpException.Reason.NOT_REQUESTED, 0, "Код не запрашивался или истёк");
             case MISMATCH -> throw new InvalidOtpException(
@@ -72,6 +88,7 @@ public class DefaultOtpService implements OtpService {
         }
     }
 
+    //Метод для генерации кода размером, который указан в .properties
     private String generateCode() {
         StringBuilder code = new StringBuilder(properties.length());
         for (int i = 0; i < properties.length(); i++) {

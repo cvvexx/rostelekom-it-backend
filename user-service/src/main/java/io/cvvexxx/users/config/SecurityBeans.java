@@ -33,7 +33,8 @@ public class SecurityBeans {
                         request -> request
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json").permitAll()
-                                .anyRequest().authenticated()//Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован, иначе 403
+                                //Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован
+                                .anyRequest().authenticated()
                 )
                 //Сессия нигде не хранится, все взаимодействие идет через JWT
                 .sessionManagement(
@@ -41,7 +42,8 @@ public class SecurityBeans {
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwtConfigurer ->
-                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter()))//Описание правил, по которым парсить JWT
+                                //Конвертер достает роли из токена связывает их с ролями Spring Security
+                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .exceptionHandling(

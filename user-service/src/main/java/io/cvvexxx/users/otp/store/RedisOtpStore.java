@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class RedisOtpStore implements OtpStore {
@@ -15,6 +16,8 @@ public class RedisOtpStore implements OtpStore {
     private static final String PERMIT_KEY_PREFIX = "otp:permit:";
     private static final String WINDOW_KEY_PREFIX = "otp:window:";
 
+    //Ниже три Lua скрипта, которые позволяют редису работать атомарно, чтобы не возникало race condition
+    //у разных потоков
     private static final RedisScript<Boolean> SAVE_SCRIPT = RedisScript.of("""
             redis.call('DEL', KEYS[1])
             redis.call('HSET', KEYS[1], 'code', ARGV[1], 'expiresAt', ARGV[2], 'attempts', '0')
@@ -51,6 +54,7 @@ public class RedisOtpStore implements OtpStore {
 
     private final StringRedisTemplate redis;
 
+    //Скрипт удаляет предыдущий код(если он был), выставляет новый, ставит ему TTL и счетчик попыток
     @Override
     public void save(String phone, String code, Duration ttl) {
         redis.execute(SAVE_SCRIPT,
@@ -62,6 +66,13 @@ public class RedisOtpStore implements OtpStore {
 
     @Override
     public OtpVerification verify(String phone, String code, int maxAttempts) {
+        /*
+         * Lua - скрипт, возвращает ответ(Статус + остаток попыток) в зависимости от того, что произошло с кодом
+         * 1. Кода нет в редисе(не запрашивался или истек TTL) -> NOT_REQUESTED и ноль оставшихся попыток
+         * 2. Код есть в редисе и совпадает с тем, что пришел -> OK и ноль оставшихся попыток
+         * 3. Код есть в редисе, но не совпадает с тем, что пришел и попытки кончились -> ATTEMPTS_EXCEEDED и ноль попыток
+         * 4. Код есть в редисе, но не совпадает с тем, что пришел, но остались еще попытки -> MISMATCH + кол-во оставшихся попыток
+         */
         List<?> result = redis.execute(VERIFY_SCRIPT,
                 List.of(codeKey(phone)),
                 code,
@@ -71,19 +82,23 @@ public class RedisOtpStore implements OtpStore {
             return OtpVerification.notRequested();
         }
 
+        //Достаем статус из результата, который отдал редис
         OtpVerification.Outcome outcome = OtpVerification.Outcome.valueOf(String.valueOf(result.get(0)));
+        //Аналогично достаем количество оставшихся попыток
         int attemptsLeft = Integer.parseInt(String.valueOf(result.get(1)));
         return new OtpVerification(outcome, attemptsLeft);
     }
 
     @Override
     public boolean tryAcquireSendPermit(String phone, Duration cooldown) {
+        //Если есть ключ, то возвращается False, если ключ создался, то выставляет ему TTL = cooldown
+        //Boolean.TRUE используется для защиты от null
         return Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(permitKey(phone), "1", cooldown));
     }
 
     @Override
     public Duration sendPermitTimeToLive(String phone) {
-        Long seconds = redis.getExpire(permitKey(phone));
+        Long seconds = redis.getExpire(permitKey(phone));//Смотрим TTL по ключу и возвращаем его
         return seconds == null || seconds < 0 ? Duration.ZERO : Duration.ofSeconds(seconds);
     }
 
@@ -93,6 +108,13 @@ public class RedisOtpStore implements OtpStore {
                 List.of(windowKey(phone)),
                 String.valueOf(window.toMillis()));
         return count == null ? 0 : count;
+    }
+
+    @Override
+    public Duration sendsWindowTimeToLive(String phone) {
+        //Получаем сколько осталось до окончания TTL окна
+        Long millis = redis.getExpire(windowKey(phone), TimeUnit.MILLISECONDS);
+        return millis == null || millis < 0 ? Duration.ZERO : Duration.ofMillis(millis);
     }
 
     private String codeKey(String phone) {

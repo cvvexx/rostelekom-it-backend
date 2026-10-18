@@ -96,7 +96,11 @@ class DefaultOtpServiceTest {
 
         assertThatThrownBy(() -> otpService.requestCode(PHONE))
                 .isInstanceOf(OtpRequestNotAllowedException.class)
-                .hasMessageContaining("Слишком много запросов");
+                .hasMessageContaining("Слишком много запросов")
+                .extracting(e -> ((OtpRequestNotAllowedException) e).getRetryAfter())
+                .satisfies(retryAfter -> assertThat((Duration) retryAfter)
+                        .isPositive()
+                        .isLessThanOrEqualTo(Duration.ofHours(1)));
     }
 
     @Test

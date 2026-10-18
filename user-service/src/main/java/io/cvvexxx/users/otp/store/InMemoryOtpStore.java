@@ -87,6 +87,16 @@ public class InMemoryOtpStore implements OtpStore {
         return updated.count();
     }
 
+    @Override
+    public Duration sendsWindowTimeToLive(String phone) {
+        Window window = windows.get(phone);
+        if (window == null) {
+            return Duration.ZERO;
+        }
+        Duration left = Duration.between(Instant.now(), window.expiresAt());
+        return left.isNegative() ? Duration.ZERO : left;
+    }
+
     public Optional<String> peekCode(String phone) {
         OtpCode stored = codes.get(phone);
         if (stored == null || stored.isExpired(Instant.now())) {

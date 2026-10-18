@@ -25,22 +25,22 @@ public class DefaultAuthService implements AuthService {
 
     @Override
     public OtpChallengeDto requestOtp(OtpRequestDto dto) {
-        String phone = PhoneNumbers.normalize(dto.phone());
-        log.info("OTP requested for phone {}", PhoneNumbers.mask(phone));
+        String phone = PhoneNumbers.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
+        log.info("OTP requested for phone {}", PhoneNumbers.mask(phone));//Логируем для дебага, также скрываем часть номера
 
         return otpService.requestCode(phone);
     }
 
     @Override
-    @Transactional
+    @Transactional//Открываем транзакцию в бд
     public TokenPairDto verifyOtp(OtpVerifyDto dto) {
-        String phone = PhoneNumbers.normalize(dto.phone());
-        otpService.verifyCode(phone, dto.code());
+        String phone = PhoneNumbers.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
+        otpService.verifyCode(phone, dto.code());//Верифицируем код, если чето не так -> выбрасываем exception и завершаем работу метода
 
-        User user = userService.findOrCreateByPhone(phone);
-        log.info("User {} authenticated by phone {}", user.getId(), PhoneNumbers.mask(phone));
+        User user = userService.findOrCreateByPhone(phone);//Получаем/создаем юзера по номеру телефона
+        log.info("User {} authenticated by phone {}", user.getId(), PhoneNumbers.mask(phone));//Логируем вход юзера
 
-        return tokenService.issueTokens(user);
+        return tokenService.issueTokens(user);//Возвращаем токены для определенного юзера
     }
 
     @Override

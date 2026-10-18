@@ -183,6 +183,18 @@ class RedisOtpStoreIT {
     }
 
     @Test
+    @DisplayName("sendsWindowTimeToLive: возвращает остаток окна, а без окна — ноль")
+    void sendsWindowTimeToLiveReturnsRemainingTime() {
+        assertThat(store.sendsWindowTimeToLive(PHONE)).isZero();
+
+        store.incrementSendsInWindow(PHONE, Duration.ofSeconds(60));
+
+        assertThat(store.sendsWindowTimeToLive(PHONE))
+                .isPositive()
+                .isLessThanOrEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
     @DisplayName("incrementSendsInWindow: параллельные отправки не теряют инкременты")
     void windowCounterDoesNotLoseIncrements() throws Exception {
         int threads = 100;

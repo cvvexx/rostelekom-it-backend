@@ -24,14 +24,16 @@ public class AuthController {
     // Внедряем в класс Service, чтобы делигировать ему бизнес-логику
     private final AuthService authService;
 
+    //Реквест на получение кода
     @PostMapping("/otp/request")
     public ResponseEntity<OtpChallengeDto> requestOtp(@RequestBody @Valid OtpRequestDto dto) {
-        return ResponseEntity.ok(authService.requestOtp(dto));
+        return ResponseEntity.ok(authService.requestOtp(dto));//Возвращаем 200, а в теле то, что возвращает service(OtpChallengeDto)
     }
 
+    //Реквест на проверку кода по номеру телефона
     @PostMapping("/otp/verify")
     public ResponseEntity<TokenPairDto> verifyOtp(@RequestBody @Valid OtpVerifyDto dto) {
-        return ResponseEntity.ok(authService.verifyOtp(dto));
+        return ResponseEntity.ok(authService.verifyOtp(dto));//Возвращаем 200, токены в JSON
     }
 
     @PostMapping("/refresh")
