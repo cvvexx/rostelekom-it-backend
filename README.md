@@ -7,20 +7,20 @@
 
 ## Как запустить
 
-Нужны **Java 21** и **Docker**. Maven ставить не надо, в репе есть `./mvnw`.
+Нужны **Java 21+** и **Docker**. Maven ставить не надо, в репе есть `./mvnw`.
 
 ```bash
 # 1. Создать свой env-файл (один раз)
 cp .env.example .env.dev
 
 # 2. Поднять Postgres и Redis
-docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 # 3. Запустить user-service (в одном терминале)
-./mvnw -pl user-service spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw -pl user-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 
 # 4. Запустить gateway-service (в другом терминале)
-./mvnw -pl gateway-service spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw -pl gateway-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
 Профиль `dev` обязателен — без него сервисы не найдут свои настройки.

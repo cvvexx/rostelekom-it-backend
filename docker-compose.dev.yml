@@ -18,7 +18,7 @@ services:
       POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:-12341234}
       POSTGRES_DB: ${USERS_DB_NAME:-users}
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - pgdata_users:/var/lib/postgresql/data
 
