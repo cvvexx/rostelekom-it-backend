@@ -1,6 +1,7 @@
 package io.cvvexxx.billings.config;
 
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,7 +9,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +23,11 @@ public class SecurityBeans {
 
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity httpSecurity,
+            AuthenticationEntryPoint authenticationEntryPoint,
+            AccessDeniedHandler accessDeniedHandler
+    ) {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(request -> request
@@ -31,9 +39,14 @@ public class SecurityBeans {
                 .oauth2ResourceServer(
                         oauth2 -> oauth2
                                 .jwt(jwtConfigurer ->
-                                        jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())
+                                        jwtConfigurer
+                                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
                                 )
-                )//TODO(добавить обработчик 401/403)
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .accessDeniedHandler(accessDeniedHandler))
+                .exceptionHandling(
+                        exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint)
+                )
                 .build();
     }
 
@@ -54,6 +67,18 @@ public class SecurityBeans {
         });
 
         return converter;
+    }
+
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint(
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
+        return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler(
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
+        return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
     }
 
 }
