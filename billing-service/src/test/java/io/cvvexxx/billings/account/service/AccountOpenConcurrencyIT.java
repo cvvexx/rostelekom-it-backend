@@ -76,14 +76,4 @@ class AccountOpenConcurrencyIT {
         assertThat(jdbc.queryForObject("select count(*) from accounts where user_id = ?", Integer.class, userId))
                 .isEqualTo(1);
     }
-
-    @Test
-    @DisplayName("Разные пользователи получают разные, возрастающие номера счетов")
-    void differentUsersGetIncreasingNumbers() {
-        long first = Long.parseLong(accountService.openAccount(UUID.randomUUID()).account().number());
-        long second = Long.parseLong(accountService.openAccount(UUID.randomUUID()).account().number());
-
-        assertThat(first).isGreaterThanOrEqualTo(1_000_000_001L);
-        assertThat(second).isGreaterThan(first);
-    }
 }

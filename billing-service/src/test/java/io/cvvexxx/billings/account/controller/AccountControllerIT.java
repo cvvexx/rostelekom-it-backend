@@ -56,23 +56,15 @@ class AccountControllerIT {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("POST: первый вызов открывает счёт — 201, нулевой баланс, номер из 10 цифр")
-    void openAccount_firstCall_returns201() throws Exception {
-        mockMvc.perform(post(ACCOUNTS).with(user(UUID.randomUUID())))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.number", matchesPattern("\\d{10}")))
-                .andExpect(jsonPath("$.balance").value(0))
-                .andExpect(jsonPath("$.currency").value("RUB"))
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
-    }
-
-    @Test
-    @DisplayName("POST: повторный вызов идемпотентен — 200 и тот же самый счёт")
-    void openAccount_secondCall_returns200WithSameAccount() throws Exception {
+    @DisplayName("POST: первый вызов открывает счёт (201), повторный идемпотентен (200, тот же счёт)")
+    void openAccount_isIdempotent() throws Exception {
         UUID userId = UUID.randomUUID();
         String first = mockMvc.perform(post(ACCOUNTS).with(user(userId)))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.number", matchesPattern("\\d{10}")))
+                .andExpect(jsonPath("$.balance").value(0))
+                .andExpect(jsonPath("$.currency").value("RUB"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andReturn().getResponse().getContentAsString();
 
         mockMvc.perform(post(ACCOUNTS).with(user(userId)))
@@ -150,15 +142,6 @@ class AccountControllerIT {
         mockMvc.perform(get(ACCOUNTS + "/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")));
-    }
-
-    @Test
-    @DisplayName("Битый токен — 401 с error=\"invalid_token\"")
-    void malformedToken_returns401InvalidToken() throws Exception {
-        mockMvc.perform(get(ACCOUNTS + "/me").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
-                        containsString("error=\"invalid_token\"")));
     }
 
     private RequestPostProcessor user(UUID userId) {

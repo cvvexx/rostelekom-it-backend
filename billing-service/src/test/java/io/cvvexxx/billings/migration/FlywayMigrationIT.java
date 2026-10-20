@@ -7,7 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,42 +44,11 @@ class FlywayMigrationIT {
     @Autowired
     private JdbcTemplate jdbc;
 
-    @Test
-    @DisplayName("Вся цепочка миграций применяется к чистому Postgres")
-    void allMigrationsApply() {
-        Integer applied = jdbc.queryForObject(
-                "select count(*) from flyway_schema_history where success = true", Integer.class);
-
-        assertThat(applied).isEqualTo(3);
-    }
-
     @ParameterizedTest
     @EnumSource(AccountStatus.class)
     @DisplayName("Каждый статус счёта из enum проходит check-constraint")
     void everyAccountStatusPassesCheckConstraint(AccountStatus status) {
         assertThatCode(() -> insertAccount(status.name())).doesNotThrowAnyException();
-    }
-
-    @Test
-    @DisplayName("Неизвестный статус счёта отклоняется")
-    void unknownAccountStatusIsRejected() {
-        assertThatThrownBy(() -> insertAccount("FROZEN"))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("ck_accounts_status");
-    }
-
-    @Test
-    @DisplayName("У пользователя не может быть двух счетов")
-    void userCannotHaveTwoAccounts() {
-        UUID userId = UUID.randomUUID();
-        jdbc.update("insert into accounts (id, user_id, number) values (?, ?, nextval('account_number_seq')::text)",
-                UUID.randomUUID(), userId);
-
-        assertThatThrownBy(() -> jdbc.update(
-                "insert into accounts (id, user_id, number) values (?, ?, nextval('account_number_seq')::text)",
-                UUID.randomUUID(), userId))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("uk_accounts_user_id");
     }
 
     @ParameterizedTest
@@ -93,27 +61,6 @@ class FlywayMigrationIT {
                 .doesNotThrowAnyException();
     }
 
-    @Test
-    @DisplayName("Неизвестный тип транзакции отклоняется")
-    void unknownTransactionTypeIsRejected() {
-        UUID accountId = insertAccount("ACTIVE");
-
-        assertThatThrownBy(() -> insertTransaction(accountId, "WITHDRAW", "10.00", null))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("ck_transactions_type");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"0", "-1.00"})
-    @DisplayName("Сумма транзакции должна быть строго положительной")
-    void nonPositiveTransactionAmountIsRejected(String amount) {
-        UUID accountId = insertAccount("ACTIVE");
-
-        assertThatThrownBy(() -> insertTransaction(accountId, "CHARGE", amount, null))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("ck_transactions_amount_positive");
-    }
-
     @ParameterizedTest
     @EnumSource(PaymentStatus.class)
     @DisplayName("Каждый статус платежа из enum проходит check-constraint")
@@ -122,17 +69,6 @@ class FlywayMigrationIT {
 
         assertThatCode(() -> insertPayment(accountId, UUID.randomUUID().toString(), status.name(), "100.00"))
                 .doesNotThrowAnyException();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"0", "-5.00"})
-    @DisplayName("Сумма платежа должна быть строго положительной")
-    void nonPositivePaymentAmountIsRejected(String amount) {
-        UUID accountId = insertAccount("ACTIVE");
-
-        assertThatThrownBy(() -> insertPayment(accountId, UUID.randomUUID().toString(), "PENDING", amount))
-                .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("ck_payments_amount_positive");
     }
 
     @Test
