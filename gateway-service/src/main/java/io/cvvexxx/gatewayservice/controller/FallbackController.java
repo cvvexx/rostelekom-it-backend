@@ -22,4 +22,15 @@ public class FallbackController {
                 );
     }
 
+    @RequestMapping("/fallback/billing") //Без указания метода ловит любой HTTP-метод, как @router.api_route("/fallback/users")
+    public ResponseEntity<Map<String, String>> billingsServiceFallback() {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(
+                        Map.of(
+                                "error", "billings_service_unavailable",
+                                "message", "Сервис платежей временно недоступен, попробуйте позже"
+                        )
+                );
+    }
+
 }
