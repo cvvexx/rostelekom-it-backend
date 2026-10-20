@@ -30,7 +30,7 @@ services:
       - .env.dev
     environment:
       POSTGRES_USER: ${BILLINGS_DB_USER:-user}
-      POSTGRES_PASSWORD: ${BILLIGNS_DB_PASSWORD:-12341234}
+      POSTGRES_PASSWORD: ${BILLINGS_DB_PASSWORD:-12341234}
       POSTGRES_DB: ${BILLINGS_DB_NAME:-billings}
     ports:
       - "55433:5432"
