@@ -7,11 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
@@ -26,6 +29,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -144,8 +148,96 @@ class AccountControllerIT {
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")));
     }
 
+    @Test
+    @DisplayName("GET /me: счёта нет — 404 в формате ProblemDetail")
+    void getMyAccount_withoutAccount_returns404() throws Exception {
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(UUID.randomUUID())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").exists());
+    }
+
+    @Test
+    @DisplayName("GET /{id}: админ получает счёт по id счёта, несуществующий — 404")
+    void getAccountById_returnsAccountForAdmin() throws Exception {
+        String accountId = openAccount(UUID.randomUUID());
+
+        mockMvc.perform(get(ACCOUNTS + "/" + accountId).with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(accountId));
+        mockMvc.perform(get(ACCOUNTS + "/" + UUID.randomUUID()).with(admin()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PATCH /{id}/status: ACTIVE → BLOCKED → ACTIVE")
+    void changeStatus_changesStatus() throws Exception {
+        String accountId = openAccount(UUID.randomUUID());
+
+        changeStatus(accountId, "BLOCKED")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BLOCKED"));
+        changeStatus(accountId, "ACTIVE")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("PATCH /{id}/status: тот же статус и любой переход из CLOSED — 409")
+    void changeStatus_conflicts_return409() throws Exception {
+        String accountId = openAccount(UUID.randomUUID());
+
+        changeStatus(accountId, "ACTIVE")
+                .andExpect(status().isConflict());
+        changeStatus(accountId, "CLOSED")
+                .andExpect(status().isOk());
+        changeStatus(accountId, "ACTIVE")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    @DisplayName("PATCH /{id}/status: без статуса — 400, несуществующий счёт — 404")
+    void changeStatus_invalidRequest() throws Exception {
+        String accountId = openAccount(UUID.randomUUID());
+
+        mockMvc.perform(patch(ACCOUNTS + "/" + accountId + "/status").with(admin())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.accountStatus").exists());
+        changeStatus(UUID.randomUUID().toString(), "BLOCKED")
+                .andExpect(status().isNotFound());
+    }
+
+    //TODO(раскомментировать, когда определятся роли: нужен @EnableMethodSecurity + @PreAuthorize на GET /{id} и PATCH /{id}/status)
+//    @Test
+//    @DisplayName("GET /{id} и PATCH /{id}/status: обычный пользователь — 403")
+//    void adminEndpoints_forbiddenForUser() throws Exception {
+//        UUID userId = UUID.randomUUID();
+//        String accountId = openAccount(userId);
+//
+//        mockMvc.perform(get(ACCOUNTS + "/" + accountId).with(user(userId)))
+//                .andExpect(status().isForbidden());
+//        mockMvc.perform(patch(ACCOUNTS + "/" + accountId + "/status").with(user(userId))
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content("{\"accountStatus\": \"CLOSED\"}"))
+//                .andExpect(status().isForbidden());
+//    }
+
     private RequestPostProcessor user(UUID userId) {
         return jwt().jwt(jwt -> jwt.subject(userId.toString()));
+    }
+
+    private RequestPostProcessor admin() {
+        return jwt().jwt(jwt -> jwt.subject(UUID.randomUUID().toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
+    private ResultActions changeStatus(String accountId, String status) throws Exception {
+        return mockMvc.perform(patch(ACCOUNTS + "/" + accountId + "/status").with(admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"accountStatus\": \"%s\"}".formatted(status)));
     }
 
     private String openAccount(UUID userId) throws Exception {

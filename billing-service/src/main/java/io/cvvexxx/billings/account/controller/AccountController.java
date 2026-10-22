@@ -2,9 +2,11 @@ package io.cvvexxx.billings.account.controller;
 
 
 import io.cvvexxx.billings.account.dto.AccountDto;
+import io.cvvexxx.billings.account.dto.ChangeStatusDto;
 import io.cvvexxx.billings.account.dto.OpenAccountResult;
 import io.cvvexxx.billings.account.service.AccountService;
 import io.cvvexxx.billings.transaction.dto.TransactionDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -13,10 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -46,6 +45,19 @@ public class AccountController {
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ResponseEntity.ok(new PagedModel<>(accountService.getMyTransactions(currentUserId(jwt), pageable)));
+    }
+
+    @GetMapping("/{id}")//TODO(ДОБАВИТЬ РОЛЬ АДМИНА/какую то защиту на этот эндпоинт)
+    public ResponseEntity<AccountDto> getAccount(@PathVariable UUID id) {
+        return ResponseEntity.ok(accountService.getAccountById(id));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<AccountDto> changeStatus(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid ChangeStatusDto changeStatusDto
+    ) {
+        return ResponseEntity.ok(accountService.changeStatus(id, changeStatusDto.accountStatus()));
     }
 
     private UUID currentUserId(Jwt jwt) {

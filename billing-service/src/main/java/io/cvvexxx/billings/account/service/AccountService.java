@@ -4,7 +4,10 @@ package io.cvvexxx.billings.account.service;
 import io.cvvexxx.billings.account.dto.AccountDto;
 import io.cvvexxx.billings.account.dto.OpenAccountResult;
 import io.cvvexxx.billings.account.entity.Account;
+import io.cvvexxx.billings.account.entity.AccountStatus;
+import io.cvvexxx.billings.account.exception.AccountClosedException;
 import io.cvvexxx.billings.account.exception.AccountNotFoundException;
+import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.account.repository.AccountRepository;
 import io.cvvexxx.billings.transaction.dto.TransactionDto;
 import io.cvvexxx.billings.transaction.entity.Transaction;
@@ -33,7 +36,6 @@ public class AccountService {
         return new OpenAccountResult(toDto(findAccount(userId)), created);
     }
 
-
     @Transactional(readOnly = true)
     public AccountDto getMyAccount(UUID userId) {
         return toDto(findAccount(userId));
@@ -45,6 +47,37 @@ public class AccountService {
                 .findByAccountIdOrderByCreatedAtDesc(findAccount(userId).getId(), pageable);
 
         return transactions.map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public AccountDto getAccountById(UUID id) {
+        return toDto(accountRepository.findById(id)
+                .orElseThrow(() -> new AccountNotFoundException("Account with id %s not found".formatted(id))));
+    }
+
+    @Transactional
+    public AccountDto changeStatus(UUID id, AccountStatus accountStatus) {
+        Account account = findAccountByIdForUpdate(id);
+        AccountStatus dbAccountStatus = account.getStatus();
+
+        if (dbAccountStatus == AccountStatus.CLOSED) {
+            throw new AccountClosedException("Account with id %s already closed"
+                    .formatted(account.getId()));
+        }
+
+        if (dbAccountStatus == accountStatus) {
+            throw new AccountStatusConflictException("Status %s is already set for account with id %s"
+                    .formatted(dbAccountStatus, account.getId()));
+        }
+
+        account.setStatus(accountStatus);
+
+        return toDto(account);
+    }
+
+    private Account findAccountByIdForUpdate(UUID id) {
+        return accountRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AccountNotFoundException("Account with id %s not found".formatted(id)));
     }
 
     private Account findAccount(UUID userId) {
