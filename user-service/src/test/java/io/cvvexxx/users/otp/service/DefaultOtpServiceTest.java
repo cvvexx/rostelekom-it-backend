@@ -104,6 +104,20 @@ class DefaultOtpServiceTest {
     }
 
     @Test
+    @DisplayName("requestCode: после превышения лимита окна повторный запрос тоже too-many-requests, а не resend-cooldown")
+    void requestCode_afterWindowLimit_keepsTooManyRequests() {
+        otpService = new DefaultOtpService(otpStore, smsSender, properties(true, Duration.ofSeconds(60), 2, 3));
+        otpStore.incrementSendsInWindow(PHONE, Duration.ofHours(1));
+        otpStore.incrementSendsInWindow(PHONE, Duration.ofHours(1));
+
+        for (int i = 0; i < 2; i++) {
+            assertThatThrownBy(() -> otpService.requestCode(PHONE))
+                    .isInstanceOf(OtpRequestNotAllowedException.class)
+                    .hasMessage("otp.too-many-requests");
+        }
+    }
+
+    @Test
     @DisplayName("verifyCode: верный код проходит и сразу удаляется — повторно его использовать нельзя")
     void verifyCode_correctCode_passesAndBurnsCode() {
         String code = otpService.requestCode(PHONE).code();

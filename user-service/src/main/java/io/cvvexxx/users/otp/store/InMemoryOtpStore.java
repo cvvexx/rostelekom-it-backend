@@ -79,6 +79,11 @@ public class InMemoryOtpStore implements OtpStore {
     }
 
     @Override
+    public void releaseSendPermit(String phone) {
+        permits.remove(phone);
+    }
+
+    @Override
     public long incrementSendsInWindow(String phone, Duration window) {
         Instant now = Instant.now();
         Window updated = windows.compute(phone, (key, current) ->

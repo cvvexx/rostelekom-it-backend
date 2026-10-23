@@ -103,6 +103,11 @@ public class RedisOtpStore implements OtpStore {
     }
 
     @Override
+    public void releaseSendPermit(String phone) {
+        redis.delete(permitKey(phone));
+    }
+
+    @Override
     public long incrementSendsInWindow(String phone, Duration window) {
         Long count = redis.execute(WINDOW_SCRIPT,
                 List.of(windowKey(phone)),

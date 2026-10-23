@@ -39,11 +39,12 @@ public class DefaultOtpService implements OtpService {
                     "otp.resend-cooldown", retryAfter.toSeconds());
         }
         //Увеличивает количество отправок кода в редисе за определенное окно(ща час времени)
-        //TODO(Сделать чтобы не было 2 запросов к редис)
         long sends = otpStore.incrementSendsInWindow(normalizedPhone, properties.window());
         if (sends > properties.maxSendsPerWindow()) {
             //Если отправлено >5, то отклоняем запрос и
             //отдаём реальный остаток окна, а не его полную длину
+            //Код не отправили -> отпускаем permit, иначе следующий запрос получит resend-cooldown вместо too-many-requests
+            otpStore.releaseSendPermit(normalizedPhone);
             Duration retryAfter = otpStore.sendsWindowTimeToLive(normalizedPhone);
             throw new OtpRequestNotAllowedException(retryAfter,
                     "otp.too-many-requests");
