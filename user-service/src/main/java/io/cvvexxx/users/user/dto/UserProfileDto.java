@@ -6,7 +6,7 @@ import java.util.UUID;
 public record UserProfileDto(
         UUID id,
         String phone,
-        String username,
+        String username,//TODO(УБРАТЬ МБ поля)
         String firstName,
         String lastName
 ) {

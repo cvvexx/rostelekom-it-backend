@@ -25,6 +25,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
 
+    //TODO(добавить смс-подтверждение(заглушку хотя бы))
     @PostMapping
     public ResponseEntity<PaymentDto> createPayment(//TODO(добавить информацию о том, создан ли аккаунт)
             @AuthenticationPrincipal Jwt jwt,
