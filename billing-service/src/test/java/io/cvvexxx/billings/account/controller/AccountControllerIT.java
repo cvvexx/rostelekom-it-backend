@@ -214,20 +214,19 @@ class AccountControllerIT {
                 .andExpect(status().isNotFound());
     }
 
-    //TODO(раскомментировать, когда определятся роли: нужен @EnableMethodSecurity + @PreAuthorize на GET /{id} и PATCH /{id}/status)
-//    @Test
-//    @DisplayName("GET /{id} и PATCH /{id}/status: обычный пользователь — 403")
-//    void adminEndpoints_forbiddenForUser() throws Exception {
-//        UUID userId = UUID.randomUUID();
-//        String accountId = openAccount(userId);
-//
-//        mockMvc.perform(get(ACCOUNTS + "/" + accountId).with(user(userId)))
-//                .andExpect(status().isForbidden());
-//        mockMvc.perform(patch(ACCOUNTS + "/" + accountId + "/status").with(user(userId))
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content("{\"accountStatus\": \"CLOSED\"}"))
-//                .andExpect(status().isForbidden());
-//    }
+    @Test
+    @DisplayName("GET /{id} и PATCH /{id}/status: обычный пользователь — 403")
+    void adminEndpoints_forbiddenForUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String accountId = openAccount(userId);
+
+        mockMvc.perform(get(ACCOUNTS + "/" + accountId).with(user(userId)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch(ACCOUNTS + "/" + accountId + "/status").with(user(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accountStatus\": \"CLOSED\"}"))
+                .andExpect(status().isForbidden());
+    }
 
     private RequestPostProcessor user(UUID userId) {
         return jwt().jwt(jwt -> jwt.subject(userId.toString()));

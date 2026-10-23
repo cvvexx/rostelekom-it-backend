@@ -13,4 +13,6 @@ public interface UserService {
     UserProfileDto getProfile(UUID userId);
 
     UserProfileDto updateProfile(UUID userId, UpdateProfileDto dto);
+
+    void grantAdminRole(UUID userId);
 }

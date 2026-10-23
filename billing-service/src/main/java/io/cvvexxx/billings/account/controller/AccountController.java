@@ -13,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -47,12 +48,14 @@ public class AccountController {
         return ResponseEntity.ok(new PagedModel<>(accountService.getMyTransactions(currentUserId(jwt), pageable)));
     }
 
-    @GetMapping("/{id}")//TODO(ДОБАВИТЬ РОЛЬ АДМИНА/какую то защиту на этот эндпоинт)
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> getAccount(@PathVariable UUID id) {
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> changeStatus(
             @PathVariable("id") UUID id,
             @RequestBody @Valid ChangeStatusDto changeStatusDto

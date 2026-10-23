@@ -18,7 +18,8 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
-@RequiredArgsConstructor //Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля, через него Spring внедряет зависимости (как Depends() в FastAPI)
+@RequiredArgsConstructor
+//Lombok-аннотация, которая неявно создает конструктор, включающий в себя все final-поля, через него Spring внедряет зависимости (как Depends() в FastAPI)
 @Slf4j //Lombok-аннотация, которая неявно создает логгер (log) в этом классе (как log = logging.getLogger(__name__))
 public class DefaultUserService implements UserService {
 
@@ -64,6 +65,16 @@ public class DefaultUserService implements UserService {
         } catch (DataIntegrityViolationException e) {
             throw new FieldAlreadyExistsException("username", user.getUsername(),
                     "user.username-exists", user.getUsername());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void grantAdminRole(UUID userId) {
+        User user = requireUser(userId);
+
+        if (user.getRoles().add(Role.ADMIN)) {
+            log.warn("Пользователь с id {} получил роль ADMIN", userId);
         }
     }
 
