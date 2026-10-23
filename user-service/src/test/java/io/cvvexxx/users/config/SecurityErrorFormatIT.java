@@ -100,7 +100,7 @@ class SecurityErrorFormatIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.title").value("Forbidden"))
-                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.detail").value("Недостаточно прав для доступа к ресурсу"))
                 .andExpect(jsonPath("$.instance").value("/test-url-denied/admin"))
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
                         containsString("error=\"insufficient_scope\"")));
@@ -114,7 +114,7 @@ class SecurityErrorFormatIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.title").value("Forbidden"))
-                .andExpect(jsonPath("$.detail").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value("Недостаточно прав для доступа к ресурсу"));
     }
 
     @Test
@@ -122,7 +122,8 @@ class SecurityErrorFormatIT {
     void urlRuleWithoutToken_returns401() throws Exception {
         mockMvc.perform(get("/test-url-denied/admin"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401));
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"));
     }
 
     private String accessToken() throws Exception {

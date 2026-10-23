@@ -35,7 +35,7 @@ class GatewaySecurityIT {
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("WWW-Authenticate", startsWith("Bearer")))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.detail").value("Access token is missing, expired or invalid"));
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"));
     }
 
     @Test

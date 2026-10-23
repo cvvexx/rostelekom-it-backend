@@ -10,7 +10,7 @@ public final class PhoneNumbersUtils {
 
     public static String normalize(String raw) {
         if (raw == null || raw.isBlank()) {
-            throw new InvalidPhoneNumberException("Phone number must not be blank");
+            throw new InvalidPhoneNumberException("phone.blank");
         }
 
         String digits = raw.replaceAll("\\D", "");
@@ -20,7 +20,7 @@ public final class PhoneNumbersUtils {
         } else if (digits.length() == RU_NATIONAL_LENGTH) {
             digits = "7" + digits;
         } else {
-            throw new InvalidPhoneNumberException("Unsupported phone number format: " + raw);
+            throw new InvalidPhoneNumberException("phone.unsupported-format", raw);
         }
 
         return "+" + digits;

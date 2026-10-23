@@ -1,7 +1,9 @@
 package io.cvvexxx.billings.account.exception;
 
-public class AccountNotFoundException extends RuntimeException {
-    public AccountNotFoundException(String message) {
-        super(message);
+import io.cvvexxx.billings.advice.LocalizedException;
+
+public class AccountNotFoundException extends LocalizedException {
+    public AccountNotFoundException(String messageCode, Object... args) {
+        super(messageCode, args);
     }
 }

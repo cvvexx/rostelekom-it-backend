@@ -36,7 +36,7 @@ public class DefaultOtpService implements OtpService {
             Duration retryAfter = otpStore.sendPermitTimeToLive(normalizedPhone);//Смотрим TTL по ключу
             //Возвращаем сообщение об ошибке
             throw new OtpRequestNotAllowedException(retryAfter,
-                    "Код уже отправлен, повторите через %d с".formatted(retryAfter.toSeconds()));
+                    "otp.resend-cooldown", retryAfter.toSeconds());
         }
         //Увеличивает количество отправок кода в редисе за определенное окно(ща час времени)
         //TODO(Сделать чтобы не было 2 запросов к редис)
@@ -46,7 +46,7 @@ public class DefaultOtpService implements OtpService {
             //отдаём реальный остаток окна, а не его полную длину
             Duration retryAfter = otpStore.sendsWindowTimeToLive(normalizedPhone);
             throw new OtpRequestNotAllowedException(retryAfter,
-                    "Слишком много запросов кода, попробуйте позже");
+                    "otp.too-many-requests");
         }
 
         String code = generateCode(); //Генерируем смс код для входа
@@ -80,12 +80,12 @@ public class DefaultOtpService implements OtpService {
             }
             //Ниже соответственно ошибки, в зависимости от статуса
             case NOT_REQUESTED -> throw new InvalidOtpException(
-                    InvalidOtpException.Reason.NOT_REQUESTED, 0, "Код не запрашивался или истёк");
+                    InvalidOtpException.Reason.NOT_REQUESTED, 0, "otp.not-requested");
             case MISMATCH -> throw new InvalidOtpException(
-                    InvalidOtpException.Reason.MISMATCH, verification.attemptsLeft(), "Неверный код");
+                    InvalidOtpException.Reason.MISMATCH, verification.attemptsLeft(), "otp.mismatch");
             case ATTEMPTS_EXCEEDED -> throw new InvalidOtpException(
                     InvalidOtpException.Reason.ATTEMPTS_EXCEEDED, 0,
-                    "Превышено число попыток, запросите код заново");
+                    "otp.attempts-exceeded");
         }
     }
 

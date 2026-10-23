@@ -1,8 +1,10 @@
 package io.cvvexxx.users.phone;
 
-public class InvalidPhoneNumberException extends RuntimeException {
+import io.cvvexxx.users.advice.LocalizedException;
 
-    public InvalidPhoneNumberException(String message) {
-        super(message);
+public class InvalidPhoneNumberException extends LocalizedException {
+
+    public InvalidPhoneNumberException(String messageCode, Object... args) {
+        super(messageCode, args);
     }
 }

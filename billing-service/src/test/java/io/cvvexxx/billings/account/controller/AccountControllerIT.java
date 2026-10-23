@@ -145,6 +145,7 @@ class AccountControllerIT {
     void withoutToken_returns401() throws Exception {
         mockMvc.perform(get(ACCOUNTS + "/me"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"))
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")));
     }
 
@@ -154,7 +155,7 @@ class AccountControllerIT {
         mockMvc.perform(get(ACCOUNTS + "/me").with(user(UUID.randomUUID())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.detail").exists());
+                .andExpect(jsonPath("$.detail").value(matchesPattern("Счёт пользователя [0-9a-f-]{36} не найден")));
     }
 
     @Test
@@ -166,7 +167,8 @@ class AccountControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(accountId));
         mockMvc.perform(get(ACCOUNTS + "/" + UUID.randomUUID()).with(admin()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value(matchesPattern("Счёт с id [0-9a-f-]{36} не найден")));
     }
 
     @Test
@@ -188,11 +190,13 @@ class AccountControllerIT {
         String accountId = openAccount(UUID.randomUUID());
 
         changeStatus(accountId, "ACTIVE")
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Статус ACTIVE уже установлен для счёта с id " + accountId));
         changeStatus(accountId, "CLOSED")
                 .andExpect(status().isOk());
         changeStatus(accountId, "ACTIVE")
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Счёт с id " + accountId + " уже закрыт"))
                 .andExpect(jsonPath("$.status").value(409));
     }
 
@@ -205,7 +209,7 @@ class AccountControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.accountStatus").exists());
+                .andExpect(jsonPath("$.errors.accountStatus").value("Статус счёта обязателен"));
         changeStatus(UUID.randomUUID().toString(), "BLOCKED")
                 .andExpect(status().isNotFound());
     }

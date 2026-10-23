@@ -4,7 +4,7 @@ import io.cvvexxx.billings.account.entity.AccountStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record ChangeStatusDto(
-        @NotNull
+        @NotNull(message = "{validation.account-status-change.account-status.required}")
         AccountStatus accountStatus
 ) {
 }

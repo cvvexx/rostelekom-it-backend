@@ -1,8 +1,10 @@
 package io.cvvexxx.users.token.exception;
 
-public class InvalidRefreshTokenException extends RuntimeException {
+import io.cvvexxx.users.advice.LocalizedException;
 
-    public InvalidRefreshTokenException(String message) {
-        super(message);
+public class InvalidRefreshTokenException extends LocalizedException {
+
+    public InvalidRefreshTokenException(String messageCode, Object... args) {
+        super(messageCode, args);
     }
 }

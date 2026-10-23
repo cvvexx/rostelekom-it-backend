@@ -24,6 +24,7 @@ import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -129,7 +130,7 @@ class PhoneAuthFlowIT {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.title").value("Unauthorized"))
-                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"))
                 .andExpect(jsonPath("$.instance").value("/api/users/me"));
     }
 
@@ -139,7 +140,7 @@ class PhoneAuthFlowIT {
         mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"))
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
                         containsString("error=\"invalid_token\"")));
     }
@@ -156,6 +157,7 @@ class PhoneAuthFlowIT {
                                 {"phone": "%s", "code": "%s"}
                                 """.formatted(PHONE, wrong)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Неверный код"))
                 .andExpect(jsonPath("$.reason").value("MISMATCH"))
                 .andExpect(jsonPath("$.attemptsLeft").value(2));
 
@@ -173,7 +175,8 @@ class PhoneAuthFlowIT {
                                 {"phone": "%s"}
                                 """.formatted(PHONE)))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
+                .andExpect(jsonPath("$.detail").value(matchesPattern("Код уже отправлен, повторите через \\d+ с")));
     }
 
     @Test
@@ -184,7 +187,20 @@ class PhoneAuthFlowIT {
                         .content("""
                                 {"phone": "12345"}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Неподдерживаемый формат номера телефона: 12345"));
+    }
+
+    @Test
+    @DisplayName("Пустой телефон — 400 с текстом ошибки валидации из messages.properties")
+    void blankPhone_returnsLocalizedValidationMessage() throws Exception {
+        mockMvc.perform(post("/api/auth/otp/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"phone": ""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.phone").value("Номер телефона обязателен"));
     }
 
     @Test
@@ -209,7 +225,8 @@ class PhoneAuthFlowIT {
                         .content("""
                                 {"refreshToken": "%s"}
                                 """.formatted(refreshToken)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Refresh-токен отозван"));
     }
 
     @Test
@@ -230,7 +247,89 @@ class PhoneAuthFlowIT {
                         .content("""
                                 {"refreshToken": "%s"}
                                 """.formatted(refreshToken)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Refresh-токен отозван"));
+    }
+
+    @Test
+    @DisplayName("Неизвестный refresh-токен — 401 с текстом ошибки")
+    void refresh_unknownToken_returns401() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken": "unknown"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Неизвестный refresh-токен"));
+    }
+
+    @Test
+    @DisplayName("Проверка кода, который не запрашивали — 400 NOT_REQUESTED")
+    void verify_withoutRequest_returns400NotRequested() throws Exception {
+        mockMvc.perform(post("/api/auth/otp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"phone": "%s", "code": "123456"}
+                                """.formatted(PHONE)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("NOT_REQUESTED"))
+                .andExpect(jsonPath("$.detail").value("Код не запрашивался или истёк"));
+    }
+
+    @Test
+    @DisplayName("Ошибки валидации входа, refresh и обновления профиля отдаются текстом из messages.properties")
+    void validationMessages_areResolved() throws Exception {
+        mockMvc.perform(post("/api/auth/otp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Ошибка валидации"))
+                .andExpect(jsonPath("$.errors.phone").value("Номер телефона обязателен"))
+                .andExpect(jsonPath("$.errors.code").value("Код обязателен"));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.refreshToken").value("Refresh-токен обязателен"));
+
+        String accessToken = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
+                .get("accessToken").asText();
+        mockMvc.perform(patch("/api/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "ab", "firstName": "%s"}
+                                """.formatted("x".repeat(101))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.username").value("Username должен быть от 3 до 20 символов"))
+                .andExpect(jsonPath("$.errors.firstName").value("Имя слишком длинное"));
+    }
+
+    @Test
+    @DisplayName("Занятый username — 409, кавычки в тексте ошибки на месте")
+    void updateProfile_takenUsername_returns409() throws Exception {
+        String first = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
+                .get("accessToken").asText();
+        String secondPhone = "+79997654321";
+        String second = verifyOtp(secondPhone, requestOtp(secondPhone).get("code").asText(), status().isOk())
+                .get("accessToken").asText();
+
+        mockMvc.perform(patch("/api/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + first)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "johndoe"}
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/api/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + second)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "johndoe"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Пользователь с username 'johndoe' уже существует"));
     }
 
     @Test

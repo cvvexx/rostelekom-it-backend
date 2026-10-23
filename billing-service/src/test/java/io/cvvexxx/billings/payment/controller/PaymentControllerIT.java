@@ -20,8 +20,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -101,6 +103,7 @@ class PaymentControllerIT {
 
         createPayment(userId, "key-1", "20.00")
                 .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value("Ключ идемпотентности key-1 уже использован с суммой 10.00"))
                 .andExpect(jsonPath("$.status").value(422));
     }
 
@@ -127,10 +130,17 @@ class PaymentControllerIT {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
 
-        for (String amount : new String[]{"0", "-5.00", "10.555", "null"}) {
-            createPayment(userId, UUID.randomUUID().toString(), amount)
+        Map<String, String> expectedErrors = Map.of(
+                "0", "Сумма платежа должна быть больше нуля",
+                "-5.00", "Сумма платежа должна быть больше нуля",
+                "10.555", "Сумма платежа должна содержать не больше 17 цифр в целой части и 2 после запятой",
+                "null", "Сумма платежа обязательна");
+
+        for (Map.Entry<String, String> expected : expectedErrors.entrySet()) {
+            createPayment(userId, UUID.randomUUID().toString(), expected.getKey())
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.errors.amount").exists());
+                    .andExpect(jsonPath("$.detail").value("Ошибка валидации"))
+                    .andExpect(jsonPath("$.errors.amount").value(expected.getValue()));
         }
     }
 
@@ -154,7 +164,7 @@ class PaymentControllerIT {
 
         createPayment(userId, "k".repeat(65), "10.00")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors").exists());
+                .andExpect(jsonPath("$.errors.idempotencyKey").value("Idempotency-Key должен быть не длиннее 64 символов"));
     }
 
     @Test
@@ -162,6 +172,7 @@ class PaymentControllerIT {
     void createPayment_withoutAccount_returns404() throws Exception {
         createPayment(UUID.randomUUID(), "key-1", "10.00")
                 .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value(matchesPattern("Счёт пользователя [0-9a-f-]{36} не найден")))
                 .andExpect(jsonPath("$.status").value(404));
     }
 
@@ -170,11 +181,13 @@ class PaymentControllerIT {
     void createPayment_closedAccount_returns409() throws Exception {
         UUID closed = UUID.randomUUID();
         UUID blocked = UUID.randomUUID();
-        setStatus(openAccount(closed), "CLOSED");
+        UUID closedAccountId = openAccount(closed);
+        setStatus(closedAccountId, "CLOSED");
         setStatus(openAccount(blocked), "BLOCKED");
 
         createPayment(closed, "key-1", "10.00")
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Счёт с id " + closedAccountId + " закрыт"))
                 .andExpect(jsonPath("$.status").value(409));
         createPayment(blocked, "key-1", "10.00")
                 .andExpect(status().isOk());
@@ -194,7 +207,8 @@ class PaymentControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(paymentId));
         mockMvc.perform(get(PAYMENTS + "/" + paymentId).with(user(bob)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Платёж с id " + paymentId + " не найден"));
         mockMvc.perform(get(PAYMENTS + "/" + UUID.randomUUID()).with(user(alice)))
                 .andExpect(status().isNotFound());
     }

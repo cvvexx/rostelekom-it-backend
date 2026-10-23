@@ -40,21 +40,17 @@ public class PaymentService {
         Account account = findAccount(userId);
 
         if (account.getStatus() == AccountStatus.CLOSED) {
-            throw new AccountClosedException("Account with id %s is closed".formatted(account.getId()));
+            throw new AccountClosedException("account.closed", account.getId());
         }
 
         paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, STUB_PROVIDER, idempotencyKey);
 
         Payment payment = paymentRepository.findByAccountIdAndIdempotencyKey(account.getId(), idempotencyKey)
-                .orElseThrow(
-                        () -> new PaymentNotFoundException("Payment with account id %s and idempotencyKey %s not found"
-                                .formatted(account.getId(), idempotencyKey)
-                        )
-                );
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "payment.not-found-by-idempotency-key", account.getId(), idempotencyKey));
 
         if (payment.getAmount().compareTo(amount) != 0) {
-            throw new IdempotencyKeyReusedException("Idempotency key %s already used with amount %s"
-                    .formatted(idempotencyKey, payment.getAmount()));
+            throw new IdempotencyKeyReusedException("payment.idempotency-key-reused", idempotencyKey, payment.getAmount().toPlainString());
         }
 
         return toDto(payment);
@@ -64,7 +60,7 @@ public class PaymentService {
     public PaymentDto getMyPayment(UUID userId, UUID paymentId) {
         Account account = findAccount(userId);
         return toDto(paymentRepository.findByIdAndAccountId(paymentId, account.getId())
-                .orElseThrow(() -> new PaymentNotFoundException("Payment with id %s not found".formatted(paymentId))));
+                .orElseThrow(() -> new PaymentNotFoundException("payment.not-found", paymentId)));
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +74,7 @@ public class PaymentService {
 
     private Account findAccount(UUID userId) {
         return accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new AccountNotFoundException("Account with userId %s not found".formatted(userId)));
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found-by-user", userId));
     }
 
     private PaymentDto toDto(Payment payment) {

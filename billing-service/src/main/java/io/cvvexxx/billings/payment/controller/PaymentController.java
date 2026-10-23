@@ -29,7 +29,7 @@ public class PaymentController {
     @PostMapping
     public ResponseEntity<PaymentDto> createPayment(//TODO(добавить информацию о том, создан ли аккаунт)
             @AuthenticationPrincipal Jwt jwt,
-            @Size(max = 64) @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Size(max = 64, message = "{validation.payment-create.idempotency-key.too-long}") @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody @Valid CreatePaymentDto createPaymentDto
     ) {
         UUID userId = currentUserId(jwt);

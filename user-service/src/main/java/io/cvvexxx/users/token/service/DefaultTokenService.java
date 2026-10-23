@@ -64,7 +64,7 @@ public class DefaultTokenService implements TokenService {
         Instant now = Instant.now();
 
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(refreshToken))
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is unknown"));
+                .orElseThrow(() -> new InvalidRefreshTokenException("refresh-token.unknown"));
 
         //Если токен был отменен до этого, то значит что использует уже отключенный токен ->
         //значит токен получил злоумышленник, в таком случае в целях безопасности завершаем все сессии юзера
@@ -72,11 +72,11 @@ public class DefaultTokenService implements TokenService {
             log.warn("Reuse of a revoked refresh token detected for user {}, revoking all sessions",
                     stored.getUser().getId());
             refreshTokenRepository.revokeAllByUserId(stored.getUser().getId(), now);//завершаем все сессии юзера
-            throw new InvalidRefreshTokenException("Refresh token has been revoked");
+            throw new InvalidRefreshTokenException("refresh-token.revoked");
         }
 
         if (!stored.isActive(now)) {
-            throw new InvalidRefreshTokenException("Refresh token has expired");
+            throw new InvalidRefreshTokenException("refresh-token.expired");
         }
 
         stored.setRevokedAt(now);//Ставим что токен уже отозван и мы поменяли его на новый

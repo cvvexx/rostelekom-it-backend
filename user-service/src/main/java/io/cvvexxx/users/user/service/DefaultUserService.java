@@ -5,6 +5,7 @@ import io.cvvexxx.users.user.dto.UserProfileDto;
 import io.cvvexxx.users.user.entity.Role;
 import io.cvvexxx.users.user.entity.User;
 import io.cvvexxx.users.user.exception.FieldAlreadyExistsException;
+import io.cvvexxx.users.user.exception.UserNotFoundException;
 import io.cvvexxx.users.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Locale;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
@@ -48,7 +48,7 @@ public class DefaultUserService implements UserService {
             String username = dto.username().trim().toLowerCase(Locale.ROOT);//Приводим username к нормальному виду
             if (!username.equals(user.getUsername()) && userRepository.existsByUsername(username)) {
                 throw new FieldAlreadyExistsException("username", username,
-                        "User with username '%s' already exists".formatted(username));
+                        "user.username-exists", username);
             }
             user.setUsername(username);
         }
@@ -63,7 +63,7 @@ public class DefaultUserService implements UserService {
             return toDto(userRepository.saveAndFlush(user));
         } catch (DataIntegrityViolationException e) {
             throw new FieldAlreadyExistsException("username", user.getUsername(),
-                    "User with username '%s' already exists".formatted(user.getUsername()));
+                    "user.username-exists", user.getUsername());
         }
     }
 
@@ -85,7 +85,7 @@ public class DefaultUserService implements UserService {
     //Ищем юзера по id, иначе выбрасываем exception
     private User requireUser(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User %s not found".formatted(userId)));
+                .orElseThrow(() -> new UserNotFoundException("user.not-found", userId));
     }
 
     private UserProfileDto toDto(User user) {

@@ -1,7 +1,9 @@
 package io.cvvexxx.billings.account.exception;
 
-public class AccountStatusConflictException extends RuntimeException {
-    public AccountStatusConflictException(String message) {
-        super(message);
+import io.cvvexxx.billings.advice.LocalizedException;
+
+public class AccountStatusConflictException extends LocalizedException {
+    public AccountStatusConflictException(String messageCode, Object... args) {
+        super(messageCode, args);
     }
 }

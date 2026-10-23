@@ -52,7 +52,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public AccountDto getAccountById(UUID id) {
         return toDto(accountRepository.findById(id)
-                .orElseThrow(() -> new AccountNotFoundException("Account with id %s not found".formatted(id))));
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found", id)));
     }
 
     @Transactional
@@ -61,13 +61,11 @@ public class AccountService {
         AccountStatus dbAccountStatus = account.getStatus();
 
         if (dbAccountStatus == AccountStatus.CLOSED) {
-            throw new AccountClosedException("Account with id %s already closed"
-                    .formatted(account.getId()));
+            throw new AccountClosedException("account.already-closed", account.getId());
         }
 
         if (dbAccountStatus == accountStatus) {
-            throw new AccountStatusConflictException("Status %s is already set for account with id %s"
-                    .formatted(dbAccountStatus, account.getId()));
+            throw new AccountStatusConflictException("account.status-already-set", dbAccountStatus, account.getId());
         }
 
         account.setStatus(accountStatus);
@@ -77,12 +75,12 @@ public class AccountService {
 
     private Account findAccountByIdForUpdate(UUID id) {
         return accountRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new AccountNotFoundException("Account with id %s not found".formatted(id)));
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found", id));
     }
 
     private Account findAccount(UUID userId) {
         return accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new AccountNotFoundException("Account with userId %s not found".formatted(userId)));
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found-by-user", userId));
     }
 
     private TransactionDto toDto(Transaction transaction) {

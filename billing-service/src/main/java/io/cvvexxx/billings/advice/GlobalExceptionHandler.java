@@ -5,6 +5,9 @@ import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
 import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,39 +23,51 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 //Переводит исключения в ProblemDetail, так же как GlobalExceptionHandler в user-service
+@RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    //Достаём текст ошибки из messages.properties на языке клиента (заголовок Accept-Language)
+    private final MessageSource messageSource;
+
+    private String message(String code, Object... args) {
+        return messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
+    }
+
+    private String message(LocalizedException e) {
+        return message(e.getMessage(), e.getArgs());
+    }
+
     //Нет счёта или платежа (в том числе чужого платежа, чтобы не светить что он существует)
     @ExceptionHandler({AccountNotFoundException.class, PaymentNotFoundException.class})
-    public ProblemDetail handleNotFound(RuntimeException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    public ProblemDetail handleNotFound(LocalizedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, message(e));
     }
 
     //Операция со счётом недопустима в его текущем статусе (закрыт, статус уже стоит)
     @ExceptionHandler({AccountClosedException.class, AccountStatusConflictException.class})
-    public ProblemDetail handleConflict(RuntimeException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    public ProblemDetail handleConflict(LocalizedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message(e));
     }
 
     //Тот же Idempotency-Key пришёл с другим телом запроса
     @ExceptionHandler(IdempotencyKeyReusedException.class)
     public ProblemDetail handleIdempotencyKeyReused(IdempotencyKeyReusedException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, e.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, message(e));
     }
 
     //HTTP 401(токен не валиден, истек или его вообще нет), вызывается из ProblemDetailAuthenticationEntryPoint
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuthentication(AuthenticationException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
-                "Access token is missing, expired or invalid");
+                message("error.unauthorized"));
     }
 
     //HTTP 403(не хватает прав доступа)
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAccessDenied(AccessDeniedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-                "Not enough permissions to access this resource");
+                message("error.forbidden"));
     }
 
     //Ошибки @Valid в теле запроса (@NotNull, @Positive и т.д. в DTO)
@@ -64,7 +79,7 @@ public class GlobalExceptionHandler {
                         fe -> String.valueOf(fe.getDefaultMessage()),
                         (first, second) -> first + "; " + second));
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message("error.validation-failed"));
         problem.setProperty("errors", errors);
         return problem;
     }
@@ -82,7 +97,7 @@ public class GlobalExceptionHandler {
                 errors.merge(String.valueOf(result.getMethodParameter().getParameterName()),
                         String.valueOf(error.getDefaultMessage()), (first, second) -> first + "; " + second)));
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message("error.validation-failed"));
         problem.setProperty("errors", errors);
         return problem;
     }

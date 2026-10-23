@@ -1,7 +1,9 @@
 package io.cvvexxx.billings.payment.exception;
 
-public class PaymentNotFoundException extends RuntimeException {
-    public PaymentNotFoundException(String message) {
-        super(message);
+import io.cvvexxx.billings.advice.LocalizedException;
+
+public class PaymentNotFoundException extends LocalizedException {
+    public PaymentNotFoundException(String messageCode, Object... args) {
+        super(messageCode, args);
     }
 }
