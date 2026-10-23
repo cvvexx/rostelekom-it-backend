@@ -117,8 +117,6 @@ public class DefaultTokenService implements TokenService {
                 .expiresAt(now.plus(jwtProperties.accessTokenTtl()))
                 //Уникальный id токена
                 .id(UUID.randomUUID().toString())
-                //Поле в токене, телефон юзера
-                .claim("phone", user.getPhone())
                 //Поле в токене, роли юзера списком
                 .claim("roles", user.getRoles().stream().map(Role::name).toList())
                 .build();
