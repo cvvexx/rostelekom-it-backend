@@ -8,26 +8,33 @@ import io.cvvexxx.users.user.exception.FieldAlreadyExistsException;
 import io.cvvexxx.users.user.exception.UserNotFoundException;
 import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 
 //Обработчик ошибок, который перехватывает ошибки, выброшенные в рантайме
 // и возвращает понятный JSON объект с описанием проблемы
+//ResponseEntityExceptionHandler переводит в ProblemDetail стандартные ошибки Spring MVC
+//(битый JSON, нет заголовка, неверный метод, 404 и т.п.), иначе они уходят клиенту в другом формате
+@Slf4j
 @RequiredArgsConstructor
 @RestControllerAdvice //В FastAPI это как набор @app.exception_handler(...), работает сразу для всех контроллеров
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     //Достаём текст ошибки из messages.properties на языке клиента (заголовок Accept-Language)
     private final MessageSource messageSource;
@@ -106,8 +113,9 @@ public class GlobalExceptionHandler {
 
     //Ошибка валидации входных данных
     //Сюда попадают ошибки @Valid (@NotBlank, @Size и т.д. в DTO), аналог RequestValidationError в FastAPI, только отдаем 400, а не 422
-    @ExceptionHandler(BindException.class)
-    public ProblemDetail handleBindException(BindException e) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         Map<String, String> errors = e.getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
@@ -117,6 +125,13 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message("error.validation-failed"));
         //В JSON добавляется проперти errors - СПИСОК ошибок валидации
         problem.setProperty("errors", errors);
-        return problem;
+        return handleExceptionInternal(e, problem, headers, status, request);
+    }
+
+    //Всё, что не поймали выше: клиенту 500 без подробностей, стектрейс только в лог
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception e) {
+        log.error("Unhandled exception", e);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, message("error.internal"));
     }
 }

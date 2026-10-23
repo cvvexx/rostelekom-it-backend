@@ -6,26 +6,34 @@ import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
 import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-//Переводит исключения в ProblemDetail, так же как GlobalExceptionHandler в user-service
+//Переводит исключения в ProblemDetail, так же как GlobalExceptionHandler в user-service.
+//Стандартные ошибки Spring MVC (битый JSON, нет заголовка, 404 и т.п.) переводит ResponseEntityExceptionHandler
+@Slf4j
 @RequiredArgsConstructor
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     //Достаём текст ошибки из messages.properties на языке клиента (заголовок Accept-Language)
     private final MessageSource messageSource;
@@ -71,8 +79,9 @@ public class GlobalExceptionHandler {
     }
 
     //Ошибки @Valid в теле запроса (@NotNull, @Positive и т.д. в DTO)
-    @ExceptionHandler(BindException.class)
-    public ProblemDetail handleBindException(BindException e) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         Map<String, String> errors = e.getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
@@ -81,13 +90,14 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message("error.validation-failed"));
         problem.setProperty("errors", errors);
-        return problem;
+        return handleExceptionInternal(e, problem, headers, status, request);
     }
 
     //Ошибки валидации параметров метода контроллера, например @Size на заголовке Idempotency-Key.
     //Если у метода есть такие параметры, Spring кладёт сюда и ошибки @Valid из тела вместо BindException
-    @ExceptionHandler(HandlerMethodValidationException.class)
-    public ProblemDetail handleMethodValidation(HandlerMethodValidationException e) {
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         //Ошибки полей DTO из тела запроса
         e.getBeanResults().forEach(result -> result.getFieldErrors().forEach(fe ->
@@ -99,6 +109,13 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message("error.validation-failed"));
         problem.setProperty("errors", errors);
-        return problem;
+        return handleExceptionInternal(e, problem, headers, status, request);
+    }
+
+    //Всё, что не поймали выше: клиенту 500 без подробностей, стектрейс только в лог
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception e) {
+        log.error("Unhandled exception", e);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, message("error.internal"));
     }
 }
