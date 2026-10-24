@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+//Все запросы только с JWT от user-service, кроме Swagger
 @Configuration
 public class SecurityBeans {
 
@@ -29,13 +30,13 @@ public class SecurityBeans {
             AccessDeniedHandler accessDeniedHandler
     ) {
         return httpSecurity
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)//CSRF не нужен: cookie-сессий нет, токен приходит в заголовке
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))//Сессии не храним, каждый запрос проверяется по токену
                 .oauth2ResourceServer(
                         oauth2 -> oauth2
                                 .jwt(jwtConfigurer ->
@@ -50,6 +51,7 @@ public class SecurityBeans {
                 .build();
     }
 
+    //Роли из claim "roles" превращаем в ROLE_USER/ROLE_ADMIN, чтобы работал hasRole(...)
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         var converter = new JwtAuthenticationConverter();
@@ -69,6 +71,7 @@ public class SecurityBeans {
         return converter;
     }
 
+    //401 и 403 отдаём через GlobalExceptionHandler, чтобы ответ был в ProblemDetail
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {

@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+//Лицевой счёт, у юзера он один
 @Entity
 @Getter
 @Setter
@@ -29,9 +30,11 @@ public class Account {
     @Column(name = "user_id", nullable = false, unique = true, updatable = false)
     private UUID userId;
 
+    //Номер берётся из sequence в бд (см. AccountRepository.insertIfAbsent)
     @Column(nullable = false, unique = true, length = 20, updatable = false)
     private String number;
 
+    //BigDecimal, а не double, чтобы не терять копейки на округлении
     @Column(nullable = false, precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal balance = BigDecimal.ZERO;
@@ -45,7 +48,7 @@ public class Account {
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
 
-    @Version
+    @Version //Optimistic lock: если строку параллельно изменили, Hibernate выбросит исключение
     private Long version;
 
     @Column(name = "created_at", nullable = false, updatable = false)

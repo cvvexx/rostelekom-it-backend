@@ -29,6 +29,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
 
+    //Создаём счёт, если его ещё нет, и запоминаем, создали ли новый
     @Transactional
     public OpenAccountResult openAccount(UUID userId) {
         boolean created = accountRepository.insertIfAbsent(userId) == 1;
@@ -58,9 +59,10 @@ public class AccountService {
 
     @Transactional
     public AccountDto changeStatus(UUID id, AccountStatus accountStatus) {
-        Account account = findAccountByIdForUpdate(id);
+        Account account = findAccountByIdForUpdate(id);//С блокировкой строки, чтобы два админа не перетёрли друг друга
         AccountStatus dbAccountStatus = account.getStatus();
 
+        //Закрытый счёт больше не меняем
         if (dbAccountStatus == AccountStatus.CLOSED) {
             throw new AccountClosedException("account.already-closed", account.getId());
         }
@@ -69,7 +71,7 @@ public class AccountService {
             throw new AccountStatusConflictException("account.status-already-set", dbAccountStatus, account.getId());
         }
 
-        account.setStatus(accountStatus);
+        account.setStatus(accountStatus);//save не нужен, Hibernate сам сохранит изменения при коммите
 
         return toDto(account);
     }

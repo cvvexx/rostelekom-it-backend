@@ -10,6 +10,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
+//То же, что ProblemDetailAuthenticationEntryPoint, только для 403
 public class ProblemDetailAccessDeniedHandler implements AccessDeniedHandler {
 
     private final AccessDeniedHandler bearerAccessDeniedHandler = new BearerTokenAccessDeniedHandler();

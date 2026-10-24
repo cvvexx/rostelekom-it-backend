@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+//Контроллер платежей (пополнение счёта)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/billing/payments")
@@ -28,6 +29,7 @@ public class PaymentController {
 
 
     //TODO(добавить смс-подтверждение(заглушку хотя бы))
+    //Создание платежа. Idempotency-Key защищает от дублей, если фронт отправит запрос повторно
     @PostMapping
     public ResponseEntity<PaymentDto> createPayment(//TODO(добавить информацию о том, создан ли аккаунт)
             @AuthenticationPrincipal Jwt jwt,
@@ -38,6 +40,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.createPayment(userId, createPaymentDto.amount(), idempotencyKey));
     }
 
+    //Только свой платёж, на чужой будет 404
     @GetMapping("/{id}")
     public ResponseEntity<PaymentDto> getMyPayment(
             @AuthenticationPrincipal Jwt jwt,
@@ -46,12 +49,14 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getMyPayment(currentUserId(jwt), id));
     }
 
+    //Ручное подтверждение платежа админом
     @PostMapping("/{id}/confirm")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaymentDto> confirmPayment(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(paymentService.confirmPayment(id));
     }
 
+    //Свой платёж может отменить юзер, любой - админ
     @PostMapping("/{id}/cancel")
     public ResponseEntity<PaymentDto> cancelPayment(
             @AuthenticationPrincipal Jwt jwt,
@@ -64,6 +69,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.cancelPayment(currentUserId(jwt), id, isAdmin));
     }
 
+    //Все платежи юзера, новые сверху
     @GetMapping
     public ResponseEntity<PagedModel<PaymentDto>> getMyPayments(
             @AuthenticationPrincipal Jwt jwt,

@@ -50,12 +50,14 @@ public class PaymentService {
             throw new AccountClosedException("account.closed", account.getId());
         }
 
+        //Если платёж с таким ключом уже есть, вставка ничего не сделает и ниже прочитаем существующий
         paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, paymentProvider.name(), idempotencyKey);
 
         Payment payment = paymentRepository.findByAccountIdAndIdempotencyKey(account.getId(), idempotencyKey)
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "payment.not-found-by-idempotency-key", account.getId(), idempotencyKey));
 
+        //Ключ тот же, а сумма другая - значит это другой запрос, отклоняем
         if (payment.getAmount().compareTo(amount) != 0) {
             throw new IdempotencyKeyReusedException(
                     "payment.idempotency-key-reused", idempotencyKey, payment.getAmount().toPlainString()
@@ -97,6 +99,7 @@ public class PaymentService {
         return succeed(payment);
     }
 
+    //Провайдер сообщил об изменении платежа. Статусу из запроса не верим, а перепроверяем у провайдера
     @Transactional
     public PaymentDto handleProviderNotification(String providerPaymentId) {
         Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(paymentProvider.name(), providerPaymentId)
@@ -122,6 +125,7 @@ public class PaymentService {
         if (payment.getStatus() == PaymentStatus.CANCELED) {//Отменённый платёж подтвердить нельзя
             throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
         }
+        //Блокируем счёт, чтобы параллельные пополнения не потеряли деньги
         Account account = accountRepository.findByIdForUpdate(payment.getAccount().getId())
                 .orElseThrow(() -> new AccountNotFoundException("account.not-found", payment.getAccount().getId()));
 

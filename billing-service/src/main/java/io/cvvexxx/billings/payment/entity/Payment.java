@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+//Платёж на пополнение счёта
 @Entity
 @Getter
 @Setter
@@ -44,13 +45,13 @@ public class Payment {
     private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(nullable = false, length = 32, updatable = false)
-    private String provider;
+    private String provider;//Имя провайдера, например STUB
 
     @Column(name = "provider_payment_id", length = 64)
-    private String providerPaymentId;
+    private String providerPaymentId;//id платежа у провайдера, заполняется после создания платежа у него
 
     @Column(name = "confirmation_url", length = 2048)
-    private String confirmationUrl;
+    private String confirmationUrl;//Ссылка, по которой юзер идёт оплачивать
 
     @Column(name = "idempotency_key", nullable = false, length = 64, updatable = false)
     private String idempotencyKey;
@@ -63,6 +64,7 @@ public class Payment {
     @UpdateTimestamp
     private Instant updatedAt;
 
+    //Платёж уже оплачен или отменён
     public boolean isFinal() {
         return status != PaymentStatus.PENDING;
     }

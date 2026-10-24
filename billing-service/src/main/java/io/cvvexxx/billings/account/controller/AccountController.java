@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+//Контроллер лицевых счетов
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/billing/accounts")
@@ -27,6 +28,7 @@ public class AccountController {
 
     private final AccountService accountService;
 
+    //Открывает счёт текущему юзеру: 201 если создали, 200 если уже был
     @PostMapping
     public ResponseEntity<AccountDto> openAccount(@AuthenticationPrincipal Jwt jwt) {
         OpenAccountResult result = accountService.openAccount(currentUserId(jwt));
@@ -40,6 +42,7 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getMyAccount(currentUserId(jwt)));
     }
 
+    //История операций по счёту, новые сверху
     @GetMapping("/me/transactions")
     public ResponseEntity<PagedModel<TransactionDto>> getMyTransactions(
             @AuthenticationPrincipal Jwt jwt,
@@ -48,12 +51,14 @@ public class AccountController {
         return ResponseEntity.ok(new PagedModel<>(accountService.getMyTransactions(currentUserId(jwt), pageable)));
     }
 
+    //Только для админа: любой счёт по id
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> getAccount(@PathVariable UUID id) {
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
+    //Только для админа: заблокировать/разблокировать/закрыть счёт
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> changeStatus(
@@ -64,6 +69,6 @@ public class AccountController {
     }
 
     private UUID currentUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());//sub в токене - id юзера из user-service
     }
 }

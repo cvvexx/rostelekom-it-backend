@@ -24,10 +24,12 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByIdAndAccountId(UUID id, UUID accountId);
 
+    //SELECT ... FOR UPDATE, чтобы один платёж не обработали два раза параллельно
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.id = :id")
     Optional<Payment> findByIdForUpdate(UUID id);
 
+    //То же самое, но только платёж этого юзера
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.id = :id and p.account.userId = :userId")
     Optional<Payment> findByIdAndUserIdForUpdate(UUID id, UUID userId);

@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+//Запись в истории операций по счёту. После создания не меняется, поэтому без @Setter
 @Entity
 @Getter
 @AllArgsConstructor
@@ -36,12 +37,14 @@ public class Transaction {
     @Column(nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal amount;
 
+    //Баланс после операции, чтобы не пересчитывать всю историю
     @Column(name = "balance_after", nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal balanceAfter;
 
     @Column(length = 255, updatable = false)
     private String description;
 
+    //Платёж, из-за которого появилась операция (может быть null)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id", updatable = false)
     private Payment payment;

@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 public record CreatePaymentDto(
         @NotNull(message = "{validation.payment-create.amount.required}")
         @Positive(message = "{validation.payment-create.amount.positive}")
-        @Digits(integer = 17, fraction = 2, message = "{validation.payment-create.amount.digits}")
+        @Digits(integer = 17, fraction = 2, message = "{validation.payment-create.amount.digits}")//Не больше 2 знаков после запятой, как в бд
         BigDecimal amount
 ) {
 }
