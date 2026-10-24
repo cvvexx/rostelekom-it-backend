@@ -8,14 +8,18 @@ import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.repository.AccountRepository;
 import io.cvvexxx.billings.payment.dto.PaymentDto;
 import io.cvvexxx.billings.payment.entity.Payment;
+import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
 import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
+import io.cvvexxx.billings.payment.exception.PaymentStatusConflictException;
 import io.cvvexxx.billings.payment.repository.PaymentRepository;
+import io.cvvexxx.billings.transaction.entity.Transaction;
+import io.cvvexxx.billings.transaction.entity.TransactionType;
+import io.cvvexxx.billings.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +36,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
 
     @Transactional
     public PaymentDto createPayment(
@@ -70,6 +75,65 @@ public class PaymentService {
         Page<Payment> payments = paymentRepository.findByAccountIdOrderByCreatedAtDesc(accountId, pageable);
 
         return payments.map(this::toDto);
+    }
+
+    @Transactional
+    public PaymentDto confirmPayment(UUID userId, UUID paymentId, boolean isAdmin) {
+        Payment payment = findPayment(userId, paymentId, isAdmin);
+
+        if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Повторное подтверждение — просто отдаём платёж
+            return toDto(payment);
+        }
+        if (payment.getStatus() == PaymentStatus.CANCELED) {//Отменённый платёж подтвердить нельзя
+            throw new PaymentStatusConflictException("payment.status-conflict", paymentId, payment.getStatus());
+        }
+        Account account = accountRepository.findByIdForUpdate(payment.getAccount().getId())
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found", payment.getAccount().getId()));
+
+        if (account.getStatus() == AccountStatus.CLOSED) {
+            throw new AccountClosedException("account.closed", account.getId());
+        }
+
+        payment.setStatus(PaymentStatus.SUCCEEDED);//Выставляем статус на SUCCEEDED
+
+        BigDecimal paymentAmount = payment.getAmount();
+
+        account.setBalance(account.getBalance().add(paymentAmount));//добавляем сумму на баланс
+
+        Transaction transaction = Transaction.builder()//Создаем транзакцию для истории операций
+                .account(account)
+                .type(TransactionType.TOP_UP)
+                .amount(paymentAmount)
+                .payment(payment)
+                .balanceAfter(account.getBalance())
+                .build();
+        transactionRepository.save(transaction);//сохраняем транзакцию
+
+        return toDto(payment);
+    }
+
+    @Transactional
+    public PaymentDto cancelPayment(UUID userId, UUID paymentId, boolean isAdmin) {
+        Payment payment = findPayment(userId, paymentId, isAdmin);
+
+        if (payment.getStatus() == PaymentStatus.CANCELED) {//Повторная отмена — просто отдаём платёж
+            return toDto(payment);
+        }
+        if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Оплаченный платёж отменить нельзя
+            throw new PaymentStatusConflictException("payment.status-conflict", paymentId, payment.getStatus());
+        }
+
+        payment.setStatus(PaymentStatus.CANCELED);
+
+        return toDto(payment);
+    }
+
+    private Payment findPayment(UUID userId, UUID paymentId, boolean isAdmin) {
+        return (
+                isAdmin
+                        ? paymentRepository.findByIdForUpdate(paymentId)//Если админ, то получаем платеж без айди аккаунта
+                        : paymentRepository.findByIdAndUserIdForUpdate(paymentId, userId)
+        ).orElseThrow(() -> new PaymentNotFoundException("payment.not-found", paymentId));
     }
 
     private Account findAccount(UUID userId) {

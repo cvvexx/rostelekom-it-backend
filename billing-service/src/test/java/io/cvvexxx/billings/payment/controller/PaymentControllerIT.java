@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -19,6 +20,7 @@ import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -233,8 +235,135 @@ class PaymentControllerIT {
                 .andExpect(jsonPath("$.page.totalElements").value(3));
     }
 
+    @Test
+    @DisplayName("POST /{id}/confirm: SUCCEEDED, баланс пополнен, повтор не зачисляет второй раз")
+    void confirmPayment_creditsBalanceOnce() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        String paymentId = createPaymentId(userId, "500.00");
+
+        confirm(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        confirm(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(500.00));
+        Integer count = jdbc.queryForObject(
+                "select count(*) from transactions where account_id = ? and type = 'TOP_UP'", Integer.class, accountId);
+        assertEquals(1, count);
+    }
+
+    @Test
+    @DisplayName("POST /{id}/confirm: админ без счёта подтверждает, деньги уходят владельцу платежа")
+    void confirmPayment_byAdmin_creditsOwner() throws Exception {
+        UUID owner = UUID.randomUUID();
+        openAccount(owner);
+        String paymentId = createPaymentId(owner, "300.00");
+
+        confirm(admin(), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(owner)))
+                .andExpect(jsonPath("$.balance").value(300.00));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/confirm и /cancel: чужой платёж — 404, статус и баланс не меняются")
+    void confirmAndCancel_foreignPayment_returns404() throws Exception {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        openAccount(alice);
+        openAccount(bob);
+        String paymentId = createPaymentId(alice, "10.00");
+
+        confirm(user(bob), paymentId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Платёж с id " + paymentId + " не найден"));
+        cancel(user(bob), paymentId)
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get(PAYMENTS + "/" + paymentId).with(user(alice)))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(alice)))
+                .andExpect(jsonPath("$.balance").value(0));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: CANCELED, повтор — 200, подтвердить отменённый — 409")
+    void cancelPayment_thenConfirm_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELED"));
+        cancel(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELED"));
+        confirm(user(userId), paymentId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " находится в статусе CANCELED"));
+
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(0));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: оплаченный платёж отменить нельзя — 409")
+    void cancelPayment_succeeded_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        confirm(user(userId), paymentId).andExpect(status().isOk());
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " находится в статусе SUCCEEDED"));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/confirm: счёт закрыли после создания платежа — 409, баланс не меняется")
+    void confirmPayment_closedAccount_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        setStatus(accountId, "CLOSED");
+
+        confirm(admin(), paymentId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Счёт с id " + accountId + " закрыт"));
+
+        assertEquals(0, jdbc.queryForObject(
+                "select balance from accounts where id = ?", BigDecimal.class, accountId).signum());
+    }
+
     private RequestPostProcessor user(UUID userId) {
         return jwt().jwt(jwt -> jwt.subject(userId.toString()));
+    }
+
+    private RequestPostProcessor admin() {
+        return jwt().jwt(jwt -> jwt.subject(UUID.randomUUID().toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
+    private String createPaymentId(UUID userId, String amount) throws Exception {
+        String body = createPayment(userId, UUID.randomUUID().toString(), amount)
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.id");
+    }
+
+    private ResultActions confirm(RequestPostProcessor auth, String paymentId) throws Exception {
+        return mockMvc.perform(post(PAYMENTS + "/" + paymentId + "/confirm").with(auth));
+    }
+
+    private ResultActions cancel(RequestPostProcessor auth, String paymentId) throws Exception {
+        return mockMvc.perform(post(PAYMENTS + "/" + paymentId + "/cancel").with(auth));
     }
 
     private ResultActions createPayment(UUID userId, String idempotencyKey, String amount) throws Exception {

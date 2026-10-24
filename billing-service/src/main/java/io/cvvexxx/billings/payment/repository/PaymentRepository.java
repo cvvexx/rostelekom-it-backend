@@ -22,11 +22,15 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByAccountIdAndIdempotencyKey(UUID accountId, String idempotencyKey);
 
-    Optional<Payment> findByIdAndAccountId(UUID id,  UUID accountId);
+    Optional<Payment> findByIdAndAccountId(UUID id, UUID accountId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select p from Payment p where p.provider = :provider and p.providerPaymentId = :providerPaymentId")
-    Optional<Payment> findByProviderPaymentIdForUpdate(String provider, String providerPaymentId);
+    @Query("select p from Payment p where p.id = :id")
+    Optional<Payment> findByIdForUpdate(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Payment p where p.id = :id and p.account.userId = :userId")
+    Optional<Payment> findByIdAndUserIdForUpdate(UUID id, UUID userId);
 
     //Для того чтобы обрабатывать зависшие платежи
     List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, Instant before);

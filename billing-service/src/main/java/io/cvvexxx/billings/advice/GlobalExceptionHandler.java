@@ -5,6 +5,7 @@ import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
 import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
+import io.cvvexxx.billings.payment.exception.PaymentStatusConflictException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
@@ -53,7 +54,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     //Операция со счётом недопустима в его текущем статусе (закрыт, статус уже стоит)
-    @ExceptionHandler({AccountClosedException.class, AccountStatusConflictException.class})
+    @ExceptionHandler({AccountClosedException.class, AccountStatusConflictException.class, PaymentStatusConflictException.class})
     public ProblemDetail handleConflict(LocalizedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message(e));
     }
