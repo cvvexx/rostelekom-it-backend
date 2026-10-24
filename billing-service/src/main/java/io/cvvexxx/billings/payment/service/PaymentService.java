@@ -12,6 +12,8 @@ import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
 import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
 import io.cvvexxx.billings.payment.exception.PaymentStatusConflictException;
+import io.cvvexxx.billings.payment.provider.PaymentProvider;
+import io.cvvexxx.billings.payment.provider.ProviderPayment;
 import io.cvvexxx.billings.payment.repository.PaymentRepository;
 import io.cvvexxx.billings.transaction.entity.Transaction;
 import io.cvvexxx.billings.transaction.entity.TransactionType;
@@ -32,11 +34,11 @@ import java.util.UUID;
 public class PaymentService {
 
     private final static String RUB_CURRENCY = "RUB";
-    private final static String STUB_PROVIDER = "STUB";
 
     private final PaymentRepository paymentRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final PaymentProvider paymentProvider;
 
     @Transactional
     public PaymentDto createPayment(
@@ -48,14 +50,25 @@ public class PaymentService {
             throw new AccountClosedException("account.closed", account.getId());
         }
 
-        paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, STUB_PROVIDER, idempotencyKey);
+        paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, paymentProvider.name(), idempotencyKey);
 
         Payment payment = paymentRepository.findByAccountIdAndIdempotencyKey(account.getId(), idempotencyKey)
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "payment.not-found-by-idempotency-key", account.getId(), idempotencyKey));
 
         if (payment.getAmount().compareTo(amount) != 0) {
-            throw new IdempotencyKeyReusedException("payment.idempotency-key-reused", idempotencyKey, payment.getAmount().toPlainString());
+            throw new IdempotencyKeyReusedException(
+                    "payment.idempotency-key-reused", idempotencyKey, payment.getAmount().toPlainString()
+            );
+        }
+
+        //При создании платежа отдаем на фронт ссылку на оплату и добавляем в бд ссылку + айдишник платежа в базе провайдера
+        if (payment.getProviderPaymentId() == null) {
+            ProviderPayment providerPayment = paymentProvider.create(
+                    payment.getId(), payment.getAmount(), payment.getCurrency(), idempotencyKey
+            );
+            payment.setProviderPaymentId(providerPayment.providerPaymentId());
+            payment.setConfirmationUrl(providerPayment.confirmationUrl());
         }
 
         return toDto(payment);
@@ -78,14 +91,36 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentDto confirmPayment(UUID userId, UUID paymentId, boolean isAdmin) {
-        Payment payment = findPayment(userId, paymentId, isAdmin);
+    public PaymentDto confirmPayment(UUID paymentId) {
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("payment.not-found", paymentId));
+        return succeed(payment);
+    }
 
+    @Transactional
+    public PaymentDto handleProviderNotification(String providerPaymentId) {
+        Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(paymentProvider.name(), providerPaymentId)
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "payment.not-found-by-provider", paymentProvider.name(), providerPaymentId));
+
+        return switch (paymentProvider.fetchStatus(providerPaymentId)) {
+            case SUCCEEDED -> succeed(payment);//Если статус оплачен, то переводим деньги и записываем в транзакции
+            case CANCELED -> cancel(payment);//Если отменен, то отменяем платеж и у нас
+            case PENDING -> toDto(payment);//Если до сих пор на рассмотрении, то просто возращаем платеж
+        };
+    }
+
+    @Transactional
+    public PaymentDto cancelPayment(UUID userId, UUID paymentId, boolean isAdmin) {
+        return cancel(findPayment(userId, paymentId, isAdmin));
+    }
+
+    private PaymentDto succeed(Payment payment) {
         if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Повторное подтверждение — просто отдаём платёж
             return toDto(payment);
         }
         if (payment.getStatus() == PaymentStatus.CANCELED) {//Отменённый платёж подтвердить нельзя
-            throw new PaymentStatusConflictException("payment.status-conflict", paymentId, payment.getStatus());
+            throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
         }
         Account account = accountRepository.findByIdForUpdate(payment.getAccount().getId())
                 .orElseThrow(() -> new AccountNotFoundException("account.not-found", payment.getAccount().getId()));
@@ -112,15 +147,12 @@ public class PaymentService {
         return toDto(payment);
     }
 
-    @Transactional
-    public PaymentDto cancelPayment(UUID userId, UUID paymentId, boolean isAdmin) {
-        Payment payment = findPayment(userId, paymentId, isAdmin);
-
+    private PaymentDto cancel(Payment payment) {
         if (payment.getStatus() == PaymentStatus.CANCELED) {//Повторная отмена — просто отдаём платёж
             return toDto(payment);
         }
         if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Оплаченный платёж отменить нельзя
-            throw new PaymentStatusConflictException("payment.status-conflict", paymentId, payment.getStatus());
+            throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
         }
 
         payment.setStatus(PaymentStatus.CANCELED);

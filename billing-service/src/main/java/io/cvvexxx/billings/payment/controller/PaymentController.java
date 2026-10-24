@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -46,15 +47,9 @@ public class PaymentController {
     }
 
     @PostMapping("/{id}/confirm")
-    public ResponseEntity<PaymentDto> confirmPayment(
-            @AuthenticationPrincipal Jwt jwt,
-            Authentication authentication,
-            @PathVariable("id") UUID id
-    ) {
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        return ResponseEntity.ok(paymentService.confirmPayment(currentUserId(jwt), id, isAdmin));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PaymentDto> confirmPayment(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(paymentService.confirmPayment(id));
     }
 
     @PostMapping("/{id}/cancel")

@@ -4,6 +4,7 @@ import io.cvvexxx.billings.account.service.AccountService;
 import io.cvvexxx.billings.payment.dto.PaymentDto;
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.exception.PaymentStatusConflictException;
+import io.cvvexxx.billings.payment.provider.stub.StubPaymentProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +55,26 @@ class PaymentConfirmConcurrencyIT {
     @Autowired
     private PaymentService paymentService;
     @Autowired
+    private StubPaymentProvider stubPaymentProvider;
+    @Autowired
     private JdbcTemplate jdbc;
+
+    @Test
+    @DisplayName("Провайдер прислал один webhook несколько раз одновременно: деньги зачислены один раз")
+    void parallelDuplicateWebhooks_creditOnce() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = accountService.openAccount(userId).account().id();
+        UUID paymentId = createPayment(userId, "100.00");
+        String providerPaymentId = "stub-" + paymentId;
+        stubPaymentProvider.markPaid(providerPaymentId);
+
+        List<Object> results = runInParallel(i -> () -> paymentService.handleProviderNotification(providerPaymentId));
+
+        assertThat(results).allSatisfy(r ->
+                assertThat(r).isInstanceOfSatisfying(PaymentDto.class, p -> assertThat(p.status()).isEqualTo(PaymentStatus.SUCCEEDED)));
+        assertThat(balance(accountId)).isEqualByComparingTo("100.00");
+        assertThat(topUps(accountId)).isEqualTo(1);
+    }
 
     @Test
     @DisplayName("Параллельное подтверждение одного платежа: все получают SUCCEEDED, деньги зачислены один раз")
@@ -63,7 +83,7 @@ class PaymentConfirmConcurrencyIT {
         UUID accountId = accountService.openAccount(userId).account().id();
         UUID paymentId = createPayment(userId, "100.00");
 
-        List<Object> results = runInParallel(i -> () -> paymentService.confirmPayment(userId, paymentId, false));
+        List<Object> results = runInParallel(i -> () -> paymentService.confirmPayment(paymentId));
 
         assertThat(results).allSatisfy(r ->
                 assertThat(r).isInstanceOfSatisfying(PaymentDto.class, p -> assertThat(p.status()).isEqualTo(PaymentStatus.SUCCEEDED)));
@@ -80,7 +100,7 @@ class PaymentConfirmConcurrencyIT {
                 .mapToObj(i -> createPayment(userId, "10.00"))
                 .toList();
 
-        List<Object> results = runInParallel(i -> () -> paymentService.confirmPayment(userId, paymentIds.get(i), false));
+        List<Object> results = runInParallel(i -> () -> paymentService.confirmPayment(paymentIds.get(i)));
 
         assertThat(results).allMatch(PaymentDto.class::isInstance);
         assertThat(balance(accountId)).isEqualByComparingTo("80.00");
@@ -95,7 +115,7 @@ class PaymentConfirmConcurrencyIT {
         UUID paymentId = createPayment(userId, "100.00");
 
         List<Object> results = runInParallel(i -> i % 2 == 0
-                ? () -> paymentService.confirmPayment(userId, paymentId, false)
+                ? () -> paymentService.confirmPayment(paymentId)
                 : () -> paymentService.cancelPayment(userId, paymentId, false));
 
         PaymentStatus finalStatus = PaymentStatus.valueOf(
