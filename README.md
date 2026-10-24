@@ -1,8 +1,9 @@
 # rostelekom
 
-Бэкенд на Spring Boot, два сервиса:
+Бэкенд на Spring Boot, три сервиса:
 
 - **user-service** (порт `8081`) — юзеры, вход по номеру телефона через SMS-код (OTP), JWT-токены
+- **billing-service** (порт `8082`) — лицевой счёт, баланс, история операций, пополнение
 - **gateway-service** (порт `8080`) — единая точка входа: принимает запросы, проверяет токен и прокидывает их в нужный сервис
 
 ## Как запустить
@@ -19,7 +20,10 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 # 3. Запустить user-service (в одном терминале)
 ./mvnw -pl user-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 
-# 4. Запустить gateway-service (в другом терминале)
+# 4. Запустить billing-service (во втором терминале)
+./mvnw -pl billing-service spring-boot:run "-Dspring-boot.run.profiles=dev"
+
+# 5. Запустить gateway-service (в третьем терминале)
 ./mvnw -pl gateway-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
@@ -27,18 +31,83 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 В профиле `dev` сервисы сами читают `.env.dev` из корня репы (через `spring.config.import` в `application-dev.properties`). Ставить плагин EnvFile и что-то прописывать в Run Configuration не надо. Если `.env.dev` нет, берутся дефолты, и с `docker-compose.dev.yml` всё работает как есть.
 
-Из IntelliJ тоже можно: открыть `UserServiceApplication` / `GatewayServiceApplication`, нажать ▶, а в Run Configuration в поле *Active profiles* вписать `dev`.
+Из IntelliJ тоже можно: открыть `UserServiceApplication` / `BillingServiceApplication` / `GatewayServiceApplication`, нажать ▶, а в Run Configuration в поле *Active profiles* вписать `dev`.
 
 Тесты: `./mvnw test`
 
 ### Swagger
 
-**http://localhost:8081/swagger-ui.html**
+- user-service: **http://localhost:8081/swagger-ui.html**
+- billing-service: **http://localhost:8082/swagger-ui.html**
+
+Swagger открывается напрямую на сервисе, а не через gateway. Спека в JSON лежит по `/v3/api-docs` на тех же портах, из неё можно сгенерировать клиент для фронта.
 
 Как потыкать ручки:
 1. `POST /api/auth/otp/request` с номером телефона — в dev-режиме код придёт прямо в ответе
 2. `POST /api/auth/otp/verify` с номером и кодом — получишь `accessToken`
 3. Жмёшь **Authorize** сверху, вставляешь токен — теперь работают `/api/users/me` и остальные закрытые ручки
+4. Тот же токен подходит и для Swagger billing-service
+
+## API для фронта
+
+Все запросы идут на gateway: **http://localhost:8080**. Закрытые ручки требуют заголовок `Authorization: Bearer <accessToken>`.
+
+### Вход и регистрация
+
+Регистрации как отдельного шага нет: если номера ещё нет в базе, юзер создаётся при первом входе.
+
+| Запрос | Тело | Ответ |
+|---|---|---|
+| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds }` — `code` приходит только в dev |
+| `POST /api/auth/otp/verify` | `{ "phone", "code" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
+| `POST /api/auth/refresh` | `{ "refreshToken" }` | новая пара токенов |
+| `POST /api/auth/logout` | `{ "refreshToken" }` | `204` |
+
+- Access-токен живёт 15 минут, refresh — 30 дней.
+- **Refresh одноразовый.** После `/refresh` сохраняй новую пару и выбрасывай старую. Повторное использование старого refresh завершает **все** сессии юзера. Если фронт открыт в нескольких вкладках, refresh должен делать кто-то один, иначе юзера будет выкидывать.
+- Повторно запросить код можно через `resendAfterSeconds`. При частых запросах придёт `429` с заголовком `Retry-After`.
+
+### Профиль
+
+| Запрос | Тело | Ответ |
+|---|---|---|
+| `GET /api/users/me` | — | `{ id, phone, username, firstName, lastName }` |
+| `PATCH /api/users/me` | любые из `username` (3–20 символов), `firstName`, `lastName` (до 100) | обновлённый профиль |
+
+Телефон через профиль поменять нельзя.
+
+### Счёт и баланс
+
+| Запрос | Ответ |
+|---|---|
+| `GET /api/billing/accounts/me` | `{ id, number, balance, currency, status }` |
+| `GET /api/billing/accounts/me/transactions?page=0&size=20` | страница операций, новые сверху |
+
+- Счёт открывается автоматически при первом `GET /accounts/me`. Открой личный кабинет с этого запроса, пока счёта нет, платежи и история отвечают `404`.
+- `status`: `ACTIVE`, `BLOCKED` (ушёл в минус или заблокирован — пополнять можно), `CLOSED`.
+
+### Пополнение баланса
+
+| Запрос | Тело | Ответ |
+|---|---|---|
+| `POST /api/billing/payments` | `{ "amount": 500.00 }` + заголовок `Idempotency-Key` | `{ id, amount, currency, status, confirmationUrl, createdAt }` |
+| `GET /api/billing/payments/{id}` | — | платёж |
+| `GET /api/billing/payments?page=0&size=20` | — | страница платежей |
+| `POST /api/billing/payments/{id}/cancel` | — | отменённый платёж |
+
+- `Idempotency-Key` обязателен (до 64 символов). Генерируй новый UUID на каждое нажатие «Пополнить» и повторяй тот же ключ при ретрае, тогда двойного платежа не будет.
+- `status`: `PENDING` (ждём оплату), `SUCCEEDED` (деньги зачислены), `CANCELED`.
+- **Сейчас вместо платёжки заглушка.** `confirmationUrl` — это путь вида `/api/billing/stub/pay/stub-<id>`, на который надо отправить `POST` с токеном. После этого платёж станет `SUCCEEDED`, а баланс увеличится. С настоящим провайдером тут будет редирект на страницу оплаты, этот кусок фронта потом поменяется.
+
+### Ошибки
+
+Все ошибки приходят в формате [ProblemDetail](https://www.rfc-editor.org/rfc/rfc9457):
+
+```json
+{ "status": 400, "title": "Bad Request", "detail": "Ошибка валидации", "errors": { "amount": "Сумма платежа должна быть больше нуля" } }
+```
+
+`detail` — готовый текст на русском, его можно показывать юзеру. `errors` есть только у ошибок валидации (ключ — поле запроса). Если сервис за gateway лежит, придёт `503`.
 
 ## Структура папок
 

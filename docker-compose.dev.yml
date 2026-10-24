@@ -22,5 +22,22 @@ services:
     volumes:
       - pgdata_users:/var/lib/postgresql/data
 
+  billings_db:
+    image: postgres:16
+    container_name: rostelekom_billings_db
+    restart: always
+    env_file:
+      - .env.dev
+    environment:
+      POSTGRES_USER: ${BILLINGS_DB_USER:-user}
+      POSTGRES_PASSWORD: ${BILLINGS_DB_PASSWORD:-12341234}
+      POSTGRES_DB: ${BILLINGS_DB_NAME:-billings}
+    ports:
+      - "55433:5432"
+    volumes:
+      - pgdata_billings:/var/lib/postgresql/data
+
+
 volumes:
   pgdata_users:
+  pgdata_billings:

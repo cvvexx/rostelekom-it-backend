@@ -79,6 +79,11 @@ class SecurityErrorFormatIT {
             String deniedByMethodRule() {
                 return "secret";
             }
+
+            @GetMapping("/test-unexpected-error")
+            String unexpectedError() {
+                throw new IllegalStateException("секретная внутренняя деталь");
+            }
         }
     }
 
@@ -100,7 +105,7 @@ class SecurityErrorFormatIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.title").value("Forbidden"))
-                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.detail").value("Недостаточно прав для доступа к ресурсу"))
                 .andExpect(jsonPath("$.instance").value("/test-url-denied/admin"))
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
                         containsString("error=\"insufficient_scope\"")));
@@ -114,7 +119,7 @@ class SecurityErrorFormatIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.title").value("Forbidden"))
-                .andExpect(jsonPath("$.detail").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value("Недостаточно прав для доступа к ресурсу"));
     }
 
     @Test
@@ -122,7 +127,31 @@ class SecurityErrorFormatIT {
     void urlRuleWithoutToken_returns401() throws Exception {
         mockMvc.perform(get("/test-url-denied/admin"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401));
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.detail").value("Access-токен отсутствует, истёк или недействителен"));
+    }
+
+    @Test
+    @DisplayName("Битый JSON в теле — 400 в том же ProblemDetail, а не в дефолтном формате Spring Boot")
+    void malformedJson_returnsProblemDetail() throws Exception {
+        mockMvc.perform(post("/api/auth/otp/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"phone\": "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.instance").value("/api/auth/otp/request"))
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Непойманное исключение — 500 в ProblemDetail без внутренних деталей")
+    void unexpectedException_returns500WithoutDetails() throws Exception {
+        mockMvc.perform(get("/test-unexpected-error")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.detail").value("Внутренняя ошибка сервера, попробуйте позже"));
     }
 
     private String accessToken() throws Exception {

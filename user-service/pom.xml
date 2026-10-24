@@ -34,7 +34,6 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- Swagger UI + OpenAPI-спека. Ветка 3.x - для Spring Boot 4 -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -96,8 +95,6 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Миграции пишутся под Postgres, на H2 их не проверить, поэтому для них поднимаем
-             настоящую базу в контейнере. Версия управляется BOM'ом Spring Boot -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>

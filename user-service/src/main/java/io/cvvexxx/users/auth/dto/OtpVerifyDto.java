@@ -5,14 +5,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 //DTO для подтверждения кода
-//TODO(Переписать все захардкоженные message)
 public record OtpVerifyDto(
-        @NotBlank(message = "Номер телефона обязателен") //Не null, не пустая и не из одних пробелов
-        @Size(max = 20, message = "Номер телефона слишком длинный") //Как Field(max_length=20)
+        @NotBlank(message = "{validation.otp-verify.phone.required}") //Не null, не пустая и не из одних пробелов
+        @Size(max = 20, message = "{validation.otp-verify.phone.too-long}") //Как Field(max_length=20)
         String phone,
 
-        @NotBlank(message = "Код обязателен")
-        @Pattern(regexp = "\\d{4,8}", message = "Код должен состоять из 4-8 цифр") //Как Field(pattern=...)
+        @NotBlank(message = "{validation.otp-verify.code.required}")
+        @Pattern(regexp = "\\d{4,8}", message = "{validation.otp-verify.code.pattern}") //Как Field(pattern=...)
         String code
 ) {
 }

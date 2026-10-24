@@ -96,11 +96,25 @@ class DefaultOtpServiceTest {
 
         assertThatThrownBy(() -> otpService.requestCode(PHONE))
                 .isInstanceOf(OtpRequestNotAllowedException.class)
-                .hasMessageContaining("Слишком много запросов")
+                .hasMessage("otp.too-many-requests")
                 .extracting(e -> ((OtpRequestNotAllowedException) e).getRetryAfter())
                 .satisfies(retryAfter -> assertThat((Duration) retryAfter)
                         .isPositive()
                         .isLessThanOrEqualTo(Duration.ofHours(1)));
+    }
+
+    @Test
+    @DisplayName("requestCode: после превышения лимита окна повторный запрос тоже too-many-requests, а не resend-cooldown")
+    void requestCode_afterWindowLimit_keepsTooManyRequests() {
+        otpService = new DefaultOtpService(otpStore, smsSender, properties(true, Duration.ofSeconds(60), 2, 3));
+        otpStore.incrementSendsInWindow(PHONE, Duration.ofHours(1));
+        otpStore.incrementSendsInWindow(PHONE, Duration.ofHours(1));
+
+        for (int i = 0; i < 2; i++) {
+            assertThatThrownBy(() -> otpService.requestCode(PHONE))
+                    .isInstanceOf(OtpRequestNotAllowedException.class)
+                    .hasMessage("otp.too-many-requests");
+        }
     }
 
     @Test

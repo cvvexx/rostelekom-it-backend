@@ -56,7 +56,7 @@ class FlywayMigrationIT {
         Integer applied = jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where success = true", Integer.class);
 
-        assertThat(applied).isEqualTo(5);
+        assertThat(applied).isEqualTo(6);
     }
 
     @ParameterizedTest
@@ -71,7 +71,7 @@ class FlywayMigrationIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ADMIN", "user", "ROLE_USER", ""})
+    @ValueSource(strings = {"ADMIN123", "user", "ROLE_USER", ""})
     @DisplayName("Роль, которой нет в enum, отклоняется на вставке")
     void unknownRoleIsRejectedOnInsert(String badRole) {
         UUID userId = insertUser();
