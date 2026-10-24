@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 //DTO для подтверждения кода
-//TODO(Переписать все захардкоженные message)
 public record OtpVerifyDto(
         @NotBlank(message = "{validation.otp-verify.phone.required}") //Не null, не пустая и не из одних пробелов
         @Size(max = 20, message = "{validation.otp-verify.phone.too-long}") //Как Field(max_length=20)

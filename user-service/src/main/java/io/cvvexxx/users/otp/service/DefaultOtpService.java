@@ -64,7 +64,6 @@ public class DefaultOtpService implements OtpService {
                 //Задел под будущую отправку сообщений, если в .properties файле указано, что код возвращать не надо
                 //то в JSON ответа не будет кода, но я думаю, что надо будет возвращать http 204 и пустое тело
                 //к проду переделаю
-                //TODO
                 properties.exposeCode() ? code : null,
                 properties.ttl().toSeconds(),
                 properties.resendCooldown().toSeconds()

@@ -36,9 +36,10 @@ public class AccountService {
         return new OpenAccountResult(toDto(findAccount(userId)), created);
     }
 
-    @Transactional(readOnly = true)
+    //Счёт открывается при первом запросе, чтобы фронту не нужно было отдельно вызывать POST
+    @Transactional
     public AccountDto getMyAccount(UUID userId) {
-        return toDto(findAccount(userId));
+        return openAccount(userId).account();
     }
 
     @Transactional(readOnly = true)

@@ -32,7 +32,7 @@ public class AuthController {
     //@Valid - запускает проверку аннотаций внутри DTO (@NotBlank, @Size...), без нее они просто игнорируются.
     //Если проверка не прошла - метод даже не вызовется, ошибку обработает GlobalExceptionHandler.handleBindException
     @PostMapping("/otp/request") //POST /api/auth/otp/request, аналог @router.post("/otp/request")
-    public ResponseEntity<OtpChallengeDto> requestOtp(@RequestBody @Valid OtpRequestDto dto) {//TODO(ДОБАВИТТЬ ОБРАБОТКУ @VALID)
+    public ResponseEntity<OtpChallengeDto> requestOtp(@RequestBody @Valid OtpRequestDto dto) {
         return ResponseEntity.ok(authService.requestOtp(dto));//Возвращаем 200, а в теле то, что возвращает service(OtpChallengeDto)
     }
 

@@ -150,12 +150,17 @@ class AccountControllerIT {
     }
 
     @Test
-    @DisplayName("GET /me: счёта нет — 404 в формате ProblemDetail")
-    void getMyAccount_withoutAccount_returns404() throws Exception {
-        mockMvc.perform(get(ACCOUNTS + "/me").with(user(UUID.randomUUID())))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.detail").value(matchesPattern("Счёт пользователя [0-9a-f-]{36} не найден")));
+    @DisplayName("GET /me: счёта нет — открывается автоматически, повторный запрос возвращает тот же счёт")
+    void getMyAccount_withoutAccount_opensAccount() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String first = mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance").value(0))
+                .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(JsonPath.<String>read(first, "$.id")));
     }
 
     @Test
