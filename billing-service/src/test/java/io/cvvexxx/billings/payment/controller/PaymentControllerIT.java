@@ -239,6 +239,27 @@ class PaymentControllerIT {
     }
 
     @Test
+    @DisplayName("GET: sort только по разрешённым полям, остальное -> 400")
+    void getMyPayments_sortWhitelist() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        OffsetDateTime now = OffsetDateTime.now();
+        insertPayment(accountId, "300.00", now.minusHours(1));
+        insertPayment(accountId, "100.00", now);
+
+        mockMvc.perform(get(PAYMENTS).param("sort", "amount,asc").with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].amount").value(100.00))
+                .andExpect(jsonPath("$.content[1].amount").value(300.00));
+
+        mockMvc.perform(get(PAYMENTS).param("sort", "[\"string\"]").with(user(userId)))
+                .andExpect(status().isBadRequest());
+        //Поле есть в сущности, но не в списке разрешённых
+        mockMvc.perform(get(PAYMENTS).param("sort", "idempotencyKey").with(user(userId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("Оплата через заглушку провайдера: SUCCEEDED, баланс пополнен, повторный webhook не зачисляет второй раз")
     void stubPay_creditsBalanceOnce() throws Exception {
         UUID userId = UUID.randomUUID();

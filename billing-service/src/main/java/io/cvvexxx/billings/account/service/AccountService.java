@@ -46,7 +46,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public Page<TransactionDto> getMyTransactions(UUID userId, Pageable pageable) {
         Page<Transaction> transactions = transactionRepository
-                .findByAccountIdOrderByCreatedAtDesc(findAccount(userId).getId(), pageable);
+                .findByAccountId(findAccount(userId).getId(), pageable);
 
         return transactions.map(this::toDto);
     }

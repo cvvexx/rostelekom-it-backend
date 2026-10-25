@@ -29,6 +29,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getProfile(currentUserId(jwt)));
     }
 
+    //TODO(сделать зависимость фио от паспорта)
     @PatchMapping("/me") //PATCH /api/users/me, как @router.patch("/me"). Про @RequestBody @Valid см. AuthController
     public ResponseEntity<UserProfileDto> updateMe(
             @AuthenticationPrincipal Jwt jwt,

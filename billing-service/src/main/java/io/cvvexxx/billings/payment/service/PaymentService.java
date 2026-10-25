@@ -87,7 +87,7 @@ public class PaymentService {
     public Page<PaymentDto> getMyPayments(UUID userId, Pageable pageable) {
         UUID accountId = findAccount(userId).getId();
 
-        Page<Payment> payments = paymentRepository.findByAccountIdOrderByCreatedAtDesc(accountId, pageable);
+        Page<Payment> payments = paymentRepository.findByAccountId(accountId, pageable);
 
         return payments.map(this::toDto);
     }

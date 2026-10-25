@@ -65,6 +65,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, message(e));
     }
 
+    //Клиент прислал sort по полю, которого нет в списке разрешённых (sort=foo, sort=["string"] из Swagger)
+    @ExceptionHandler(InvalidSortException.class)
+    public ProblemDetail handleInvalidSort(InvalidSortException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
+    }
+
     //HTTP 401(токен не валиден, истек или его вообще нет), вызывается из ProblemDetailAuthenticationEntryPoint
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuthentication(AuthenticationException e) {

@@ -52,5 +52,5 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             """, nativeQuery = true)
     int insertIfAbsent(UUID accountId, BigDecimal amount, String currency, String provider, String idempotencyKey);
 
-    Page<Payment> findByAccountIdOrderByCreatedAtDesc(UUID accountId, Pageable pageable);
+    Page<Payment> findByAccountId(UUID accountId, Pageable pageable);
 }
