@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.provider.stub.StubPaymentProvider;
 import io.cvvexxx.billings.payment.service.PaymentService;
 import org.springframework.http.MediaType;
@@ -14,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -30,6 +32,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -62,7 +65,8 @@ class PaymentControllerIT {
     private JdbcTemplate jdbc;
     @Autowired
     private PaymentService paymentService;
-    @Autowired
+    //Spy: ведёт себя как настоящая заглушка, но в отдельных тестах можно подменить ответ провайдера
+    @MockitoSpyBean
     private StubPaymentProvider stubPaymentProvider;
 
     @Test
@@ -384,6 +388,24 @@ class PaymentControllerIT {
                 .andExpect(jsonPath("$.status").value("SUCCEEDED"));
         mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
                 .andExpect(jsonPath("$.balance").value(10.00));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: провайдер не смог отменить — 409, платёж остаётся PENDING")
+    void cancelPayment_providerCannotCancel_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        doReturn(PaymentStatus.PENDING).when(stubPaymentProvider).cancel("stub-" + paymentId);
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " пока нельзя отменить, попробуйте позже"));
+
+        mockMvc.perform(get(PAYMENTS + "/" + paymentId).with(user(userId)))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(0));
     }
 
     @Test

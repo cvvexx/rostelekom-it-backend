@@ -66,7 +66,7 @@ public class PaymentService {
 
         //При создании платежа отдаем на фронт ссылку на оплату и добавляем в бд ссылку + айдишник платежа в базе провайдера
         if (payment.getProviderPaymentId() == null) {
-            ProviderPayment providerPayment = paymentProvider.create(
+            ProviderPayment providerPayment = paymentProvider.create(//TODO(вынести обращение к провайдеру из транзакции)
                     payment.getId(), payment.getAmount(), payment.getCurrency(), idempotencyKey
             );
             payment.setProviderPaymentId(providerPayment.providerPaymentId());
@@ -116,12 +116,37 @@ public class PaymentService {
     @Transactional
     public PaymentDto cancelPayment(UUID userId, UUID paymentId, boolean isAdmin) {
         Payment payment = findPayment(userId, paymentId, isAdmin);
-        //Сначала отменяем у провайдера: юзер мог уже оплатить по выданной ссылке, тогда зачисляем деньги вместо отмены
-        if (payment.getStatus() == PaymentStatus.PENDING && payment.getProviderPaymentId() != null
-                && paymentProvider.cancel(payment.getProviderPaymentId()) == PaymentStatus.SUCCEEDED) {
-            return succeed(payment, false);
+        //Повторная отмена, уже оплаченный (409) и не дошедший до провайдера платёж - к провайдеру идти незачем
+        if (payment.getStatus() != PaymentStatus.PENDING || payment.getProviderPaymentId() == null) {
+            return cancel(payment);
         }
-        return cancel(payment);
+        //Сначала отменяем у провайдера: юзер мог уже оплатить по выданной ссылке, тогда зачисляем деньги вместо отмены.
+        //CANCELED у нас - только если провайдер подтвердил отмену, иначе по ссылке ещё можно заплатить
+        return switch (paymentProvider.cancel(payment.getProviderPaymentId())) {//TODO(по хорошему вынести из транзакции)
+            case CANCELED -> cancel(payment);
+            case SUCCEEDED -> succeed(payment, true);//Юзер успел оплатить, зачисляем
+            case PENDING -> throw new PaymentStatusConflictException("payment.cancel-not-possible", payment.getId());
+        };
+    }
+
+    //Отмена неоплаченного платежа по таймауту из PendingPaymentsCancellingJob.
+    //CANCELED у нас ставим, только если провайдер подтвердил отмену, иначе по старой ссылке ещё могут заплатить
+    @Transactional
+    public void expirePayment(UUID paymentId) {
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("payment.not-found", paymentId));
+        if (payment.getStatus() != PaymentStatus.PENDING) {//Пока ждали блокировку, платёж обработал webhook или юзер
+            return;
+        }
+        if (payment.getProviderPaymentId() == null) {//У провайдера платёж так и не создали, отменять там нечего
+            cancel(payment);
+            return;
+        }
+        switch (paymentProvider.cancel(payment.getProviderPaymentId())) {
+            case CANCELED -> cancel(payment);
+            case SUCCEEDED -> succeed(payment, true);//Юзер успел заплатить, а webhook потерялся
+            case PENDING -> log.warn("Провайдер не отменил платёж {}, попробуем в следующий запуск джобы", paymentId);
+        }
     }
 
     //allowCanceled - зачислить и отменённый у нас платёж, если провайдер подтвердил, что деньги у него
@@ -164,11 +189,6 @@ public class PaymentService {
         return toDto(payment);
     }
 
-    private Account findAccountByUserIdForUpdate(UUID userId) {
-        return accountRepository.findByUserIdForUpdate(userId)
-                .orElseThrow(() -> new AccountNotFoundException("account.not-found-by-user", userId));
-    }
-
     private PaymentDto cancel(Payment payment) {
         if (payment.getStatus() == PaymentStatus.CANCELED) {//Повторная отмена — просто отдаём платёж
             return toDto(payment);
@@ -180,6 +200,11 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.CANCELED);
 
         return toDto(payment);
+    }
+
+    private Account findAccountByUserIdForUpdate(UUID userId) {
+        return accountRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found-by-user", userId));
     }
 
     private Payment findPayment(UUID userId, UUID paymentId, boolean isAdmin) {
