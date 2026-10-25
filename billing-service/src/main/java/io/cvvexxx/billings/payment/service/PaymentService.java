@@ -96,7 +96,7 @@ public class PaymentService {
     public PaymentDto confirmPayment(UUID paymentId) {
         Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("payment.not-found", paymentId));
-        return succeed(payment);
+        return succeed(payment, false);//Админ не знает, были ли деньги на самом деле, поэтому отменённый не подтверждаем
     }
 
     //Провайдер сообщил об изменении платежа. Статусу из запроса не верим, а перепроверяем у провайдера
@@ -107,7 +107,7 @@ public class PaymentService {
                         "payment.not-found-by-provider", paymentProvider.name(), providerPaymentId));
 
         return switch (paymentProvider.fetchStatus(providerPaymentId)) {
-            case SUCCEEDED -> succeed(payment);//Если статус оплачен, то переводим деньги и записываем в транзакции
+            case SUCCEEDED -> succeed(payment, true);//Деньги у провайдера - зачисляем, даже если у нас платёж уже отменён
             case CANCELED -> cancel(payment);//Если отменен, то отменяем платеж и у нас
             case PENDING -> toDto(payment);//Если до сих пор на рассмотрении, то просто возращаем платеж
         };
@@ -115,21 +115,34 @@ public class PaymentService {
 
     @Transactional
     public PaymentDto cancelPayment(UUID userId, UUID paymentId, boolean isAdmin) {
-        return cancel(findPayment(userId, paymentId, isAdmin));
+        Payment payment = findPayment(userId, paymentId, isAdmin);
+        //Сначала отменяем у провайдера: юзер мог уже оплатить по выданной ссылке, тогда зачисляем деньги вместо отмены
+        if (payment.getStatus() == PaymentStatus.PENDING && payment.getProviderPaymentId() != null
+                && paymentProvider.cancel(payment.getProviderPaymentId()) == PaymentStatus.SUCCEEDED) {
+            return succeed(payment, false);
+        }
+        return cancel(payment);
     }
 
-    private PaymentDto succeed(Payment payment) {
+    //allowCanceled - зачислить и отменённый у нас платёж, если провайдер подтвердил, что деньги у него
+    private PaymentDto succeed(Payment payment, boolean allowCanceled) {
         if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Повторное подтверждение — просто отдаём платёж
             return toDto(payment);
         }
-        if (payment.getStatus() == PaymentStatus.CANCELED) {//Отменённый платёж подтвердить нельзя
-            throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
+        if (payment.getStatus() == PaymentStatus.CANCELED) {
+            if (!allowCanceled) {//Отменённый платёж подтвердить нельзя
+                throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
+            }
+            log.warn("Платёж {} оплачен у провайдера после отмены, зачисляем деньги", payment.getId());
         }
         //Блокируем счёт, чтобы параллельные пополнения не потеряли деньги
         Account account = accountRepository.findByIdForUpdate(payment.getAccount().getId())
                 .orElseThrow(() -> new AccountNotFoundException("account.not-found", payment.getAccount().getId()));
 
         if (account.getStatus() == AccountStatus.CLOSED) {
+            //Деньги остаются у провайдера
+            //пока только логируем, в будущем нужно решить -> TODO
+            log.error("Платёж {} нельзя зачислить: счёт {} закрыт", payment.getId(), account.getId());
             throw new AccountClosedException("account.closed", account.getId());
         }
 

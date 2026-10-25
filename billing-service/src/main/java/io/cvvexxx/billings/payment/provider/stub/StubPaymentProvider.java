@@ -38,6 +38,12 @@ public class StubPaymentProvider implements PaymentProvider {
         return paid.contains(providerPaymentId) ? PaymentStatus.SUCCEEDED : PaymentStatus.PENDING;
     }
 
+    //Как и реальный провайдер, после отмены ссылку на оплату не блокирует: так можно воспроизвести гонку оплаты и отмены
+    @Override
+    public PaymentStatus cancel(String providerPaymentId) {
+        return paid.contains(providerPaymentId) ? PaymentStatus.SUCCEEDED : PaymentStatus.CANCELED;
+    }
+
     //Имитация оплаты того, что товар оплачен, на проде этим будет заниматься провайдер
     public void markPaid(String providerPaymentId) {
         paid.add(providerPaymentId);

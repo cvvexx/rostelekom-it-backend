@@ -15,4 +15,8 @@ public interface PaymentProvider {
 
     //Спрашивает у провайдера актуальный статус платежа
     PaymentStatus fetchStatus(String providerPaymentId);
+
+    //Просит провайдера отменить платёж, возвращает итоговый статус у провайдера.
+    //SUCCEEDED - юзер успел оплатить и деньги уже у провайдера, PENDING - провайдер отменить не смог
+    PaymentStatus cancel(String providerPaymentId);
 }

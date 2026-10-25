@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import io.cvvexxx.billings.payment.provider.stub.StubPaymentProvider;
 import io.cvvexxx.billings.payment.service.PaymentService;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -61,6 +62,8 @@ class PaymentControllerIT {
     private JdbcTemplate jdbc;
     @Autowired
     private PaymentService paymentService;
+    @Autowired
+    private StubPaymentProvider stubPaymentProvider;
 
     @Test
     @DisplayName("POST: создаёт платёж в статусе PENDING, баланс не меняется")
@@ -331,8 +334,8 @@ class PaymentControllerIT {
     }
 
     @Test
-    @DisplayName("POST /{id}/cancel: CANCELED, повтор — 200, подтвердить отменённый (админом или webhook'ом) — 409")
-    void cancelPayment_thenConfirm_returns409() throws Exception {
+    @DisplayName("POST /{id}/cancel: CANCELED, повтор — 200, админ подтвердить не может — 409, а оплату у провайдера зачисляем")
+    void cancelPayment_thenConfirm_adminConflict_providerPaymentCredited() throws Exception {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
         String paymentId = createPaymentId(userId, "10.00");
@@ -346,11 +349,30 @@ class PaymentControllerIT {
         confirm(admin(), paymentId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " находится в статусе CANCELED"));
-        mockMvc.perform(post(confirmationUrl(userId, paymentId)).with(user(userId)))
-                .andExpect(status().isConflict());
-
         mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
                 .andExpect(jsonPath("$.balance").value(0));
+
+        //Юзер всё равно заплатил по выданной ссылке: деньги у провайдера, значит зачисляем
+        mockMvc.perform(post(confirmationUrl(userId, paymentId)).with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(10.00));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: юзер оплатил до отмены, а webhook ещё не пришёл — зачисляем вместо отмены")
+    void cancelPayment_paidAtProvider_creditsInsteadOfCancel() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        stubPaymentProvider.markPaid("stub-" + paymentId);
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(10.00));
     }
 
     @Test
