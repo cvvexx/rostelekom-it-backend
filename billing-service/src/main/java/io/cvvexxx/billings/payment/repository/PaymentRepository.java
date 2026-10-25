@@ -42,6 +42,9 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     //Для того чтобы обрабатывать зависшие платежи
     List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, Instant before);
 
+    //Есть ли у счёта платежи в статусе status, например неоплаченные перед закрытием счёта
+    boolean existsByStatusAndAccountId(PaymentStatus status, UUID accountId);
+
     //Как в AccountRepository: два запроса с одним idempotencyKey не упадут на unique,
     //второй просто ничего не вставит, после чего платёж перечитывается через findByAccountIdAndIdempotencyKey
     @Modifying

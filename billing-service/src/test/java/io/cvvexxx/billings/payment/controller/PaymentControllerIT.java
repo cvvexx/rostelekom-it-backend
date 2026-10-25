@@ -133,14 +133,15 @@ class PaymentControllerIT {
     }
 
     @Test
-    @DisplayName("POST: невалидная сумма — 400 с ошибкой по полю amount")
+    @DisplayName("POST: невалидная сумма — 400 с одной ошибкой по полю amount")
     void createPayment_invalidAmount_returns400() throws Exception {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
 
         Map<String, String> expectedErrors = Map.of(
-                "0", "Сумма платежа должна быть больше нуля",
-                "-5.00", "Сумма платежа должна быть больше нуля",
+                "0", "Сумма платежа не должна быть меньше 1.00",
+                "-5.00", "Сумма платежа не должна быть меньше 1.00",
+                "0.99", "Сумма платежа не должна быть меньше 1.00",
                 "10.555", "Сумма платежа должна содержать не больше 17 цифр в целой части и 2 после запятой",
                 "null", "Сумма платежа обязательна");
 
@@ -162,6 +163,16 @@ class PaymentControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\": 10.00}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST: минимальная сумма 1.00 проходит")
+    void createPayment_minAmount_returns200() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+
+        createPayment(userId, UUID.randomUUID().toString(), "1.00")
+                .andExpect(status().isOk());
     }
 
     @Test

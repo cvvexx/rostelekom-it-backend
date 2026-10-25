@@ -44,7 +44,7 @@ public class PaymentService {
     public PaymentDto createPayment(
             UUID userId, BigDecimal amount, String idempotencyKey
     ) {
-        Account account = findAccount(userId);
+        Account account = findAccountByUserIdForUpdate(userId);//С блокировкой счёта, чтобы платёж не создался параллельно с его закрытием
 
         if (account.getStatus() == AccountStatus.CLOSED) {
             throw new AccountClosedException("account.closed", account.getId());
@@ -162,6 +162,11 @@ public class PaymentService {
         transactionRepository.save(transaction);//сохраняем транзакцию
 
         return toDto(payment);
+    }
+
+    private Account findAccountByUserIdForUpdate(UUID userId) {
+        return accountRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new AccountNotFoundException("account.not-found-by-user", userId));
     }
 
     private PaymentDto cancel(Payment payment) {

@@ -98,7 +98,7 @@ class AccountControllerIT {
     void getMyTransactions_returnsNewestFirst() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID accountId = UUID.fromString(openAccount(userId));
-        UUID paymentId = insertPayment(accountId);
+        UUID paymentId = insertPayment(accountId, "SUCCEEDED");
         OffsetDateTime now = OffsetDateTime.now();
         insertTransaction(accountId, "TOP_UP", "500.00", "500.00", paymentId, now.minusHours(2));
         insertTransaction(accountId, "CHARGE", "100.00", "400.00", null, now.minusHours(1));
@@ -206,6 +206,36 @@ class AccountControllerIT {
     }
 
     @Test
+    @DisplayName("PATCH /{id}/status: закрыть счёт с неоплаченным платежом — 409, счёт остаётся открытым")
+    void changeStatus_closeWithPendingPayment_returns409() throws Exception {
+        String accountId = openAccount(UUID.randomUUID());
+        insertPayment(UUID.fromString(accountId), "PENDING");
+
+        changeStatus(accountId, "CLOSED")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Счёт " + accountId + " нельзя закрыть, есть неоплаченные платежи"));
+        mockMvc.perform(get(ACCOUNTS + "/" + accountId).with(admin()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("PATCH /{id}/status: неоплаченный платёж не мешает блокировке, а оплаченные и отменённые — закрытию")
+    void changeStatus_pendingCheckOnlyForClose() throws Exception {
+        String blockedId = openAccount(UUID.randomUUID());
+        insertPayment(UUID.fromString(blockedId), "PENDING");
+        changeStatus(blockedId, "BLOCKED")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BLOCKED"));
+
+        String closedId = openAccount(UUID.randomUUID());
+        insertPayment(UUID.fromString(closedId), "SUCCEEDED");
+        insertPayment(UUID.fromString(closedId), "CANCELED");
+        changeStatus(closedId, "CLOSED")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+    }
+
+    @Test
     @DisplayName("PATCH /{id}/status: без статуса — 400, несуществующий счёт — 404")
     void changeStatus_invalidRequest() throws Exception {
         String accountId = openAccount(UUID.randomUUID());
@@ -255,12 +285,12 @@ class AccountControllerIT {
         return JsonPath.read(body, "$.id");
     }
 
-    private UUID insertPayment(UUID accountId) {
+    private UUID insertPayment(UUID accountId, String status) {
         UUID paymentId = UUID.randomUUID();
         jdbc.update("""
                 insert into payments (id, account_id, amount, status, provider, idempotency_key)
-                values (?, ?, 500.00, 'SUCCEEDED', 'TEST', ?)
-                """, paymentId, accountId, UUID.randomUUID().toString());
+                values (?, ?, 500.00, ?, 'TEST', ?)
+                """, paymentId, accountId, status, UUID.randomUUID().toString());
         return paymentId;
     }
 
