@@ -165,10 +165,14 @@ public class PaymentService {
                 .orElseThrow(() -> new AccountNotFoundException("account.not-found", payment.getAccount().getId()));
 
         if (account.getStatus() == AccountStatus.CLOSED) {
-            //Деньги остаются у провайдера
-            //пока только логируем, в будущем нужно решить -> TODO
-            log.error("Платёж {} нельзя зачислить: счёт {} закрыт", payment.getId(), account.getId());
-            throw new AccountClosedException("account.closed", account.getId());
+            if (!allowCanceled) {//Подтверждает админ, деньги у провайдера не подтверждены - возвращать нечего
+                throw new AccountClosedException("account.closed", account.getId());
+            }
+            log.error("Платёж {} оплачен, но счёт {} закрыт, нужен возврат", payment.getId(), account.getId());
+            //TODO(решить как возвращать бабки юзеру!
+            // для dev делать не буду, когда подключим реального провайдера надо добавить метод refund)
+            payment.setStatus(PaymentStatus.REFUND_REQUIRED);
+            return toDto(payment);
         }
 
         payment.setStatus(PaymentStatus.SUCCEEDED);//Выставляем статус на SUCCEEDED
@@ -193,7 +197,8 @@ public class PaymentService {
         if (payment.getStatus() == PaymentStatus.CANCELED) {//Повторная отмена — просто отдаём платёж
             return toDto(payment);
         }
-        if (payment.getStatus() == PaymentStatus.SUCCEEDED) {//Оплаченный платёж отменить нельзя
+        if (payment.getStatus() == PaymentStatus.SUCCEEDED
+                || payment.getStatus() == PaymentStatus.REFUND_REQUIRED) {//Оплаченный платёж отменить нельзя
             throw new PaymentStatusConflictException("payment.status-conflict", payment.getId(), payment.getStatus());
         }
 

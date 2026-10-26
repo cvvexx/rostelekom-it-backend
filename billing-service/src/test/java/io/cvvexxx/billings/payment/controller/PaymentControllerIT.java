@@ -1,6 +1,7 @@
 package io.cvvexxx.billings.payment.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import io.cvvexxx.billings.payment.provider.ProviderStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -396,7 +397,7 @@ class PaymentControllerIT {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
         String paymentId = createPaymentId(userId, "10.00");
-        doReturn(PaymentStatus.PENDING).when(stubPaymentProvider).cancel("stub-" + paymentId);
+        doReturn(ProviderStatus.PENDING).when(stubPaymentProvider).cancel("stub-" + paymentId);
 
         cancel(user(userId), paymentId)
                 .andExpect(status().isConflict())
@@ -432,6 +433,25 @@ class PaymentControllerIT {
         confirm(admin(), paymentId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("Счёт с id " + accountId + " закрыт"));
+
+        assertEquals(0, jdbc.queryForObject(
+                "select balance from accounts where id = ?", BigDecimal.class, accountId).signum());
+    }
+
+    @Test
+    @DisplayName("Оплата у провайдера на закрытый счёт: REFUND_REQUIRED, баланс не меняется, отменить нельзя")
+    void stubPay_closedAccount_marksRefundRequired() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        String confirmationUrl = confirmationUrl(userId, paymentId);
+        setStatus(accountId, "CLOSED");
+
+        mockMvc.perform(post(confirmationUrl).with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUND_REQUIRED"));
+        cancel(user(userId), paymentId)
+                .andExpect(status().isConflict());
 
         assertEquals(0, jdbc.queryForObject(
                 "select balance from accounts where id = ?", BigDecimal.class, accountId).signum());

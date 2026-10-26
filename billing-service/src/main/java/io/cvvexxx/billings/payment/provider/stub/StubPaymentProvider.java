@@ -3,6 +3,7 @@ package io.cvvexxx.billings.payment.provider.stub;
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.provider.PaymentProvider;
 import io.cvvexxx.billings.payment.provider.ProviderPayment;
+import io.cvvexxx.billings.payment.provider.ProviderStatus;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -34,14 +35,14 @@ public class StubPaymentProvider implements PaymentProvider {
 
     //На проде спрашиваем у провайдера оплаты статус платежа
     @Override
-    public PaymentStatus fetchStatus(String providerPaymentId) {
-        return paid.contains(providerPaymentId) ? PaymentStatus.SUCCEEDED : PaymentStatus.PENDING;
+    public ProviderStatus fetchStatus(String providerPaymentId) {
+        return paid.contains(providerPaymentId) ? ProviderStatus.SUCCEEDED : ProviderStatus.PENDING;
     }
 
     //Как и реальный провайдер, после отмены ссылку на оплату не блокирует: так можно воспроизвести гонку оплаты и отмены
     @Override
-    public PaymentStatus cancel(String providerPaymentId) {
-        return paid.contains(providerPaymentId) ? PaymentStatus.SUCCEEDED : PaymentStatus.CANCELED;
+    public ProviderStatus cancel(String providerPaymentId) {
+        return paid.contains(providerPaymentId) ? ProviderStatus.SUCCEEDED : ProviderStatus.CANCELED;
     }
 
     //Имитация оплаты того, что товар оплачен, на проде этим будет заниматься провайдер
