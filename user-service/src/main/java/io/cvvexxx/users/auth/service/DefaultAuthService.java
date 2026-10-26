@@ -2,6 +2,8 @@ package io.cvvexxx.users.auth.service;
 
 import io.cvvexxx.users.auth.dto.OtpRequestDto;
 import io.cvvexxx.users.auth.dto.OtpVerifyDto;
+import io.cvvexxx.users.auth.dto.ServiceTokenRequestDto;
+import io.cvvexxx.users.auth.dto.ServiceTokenResponseDto;
 import io.cvvexxx.users.otp.dto.OtpChallengeDto;
 import io.cvvexxx.users.otp.service.OtpService;
 import io.cvvexxx.users.phone.PhoneNumbersUtils;
@@ -51,5 +53,10 @@ public class DefaultAuthService implements AuthService {
     @Override
     public void logout(String refreshToken) {
         tokenService.revoke(refreshToken);
+    }
+
+    @Override
+    public ServiceTokenResponseDto getServiceToken(ServiceTokenRequestDto dto) {
+        return tokenService.issueServiceToken(dto.clientId(), dto.clientSecret());
     }
 }

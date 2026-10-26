@@ -2,6 +2,8 @@ package io.cvvexxx.users.auth.service;
 
 import io.cvvexxx.users.auth.dto.OtpRequestDto;
 import io.cvvexxx.users.auth.dto.OtpVerifyDto;
+import io.cvvexxx.users.auth.dto.ServiceTokenRequestDto;
+import io.cvvexxx.users.auth.dto.ServiceTokenResponseDto;
 import io.cvvexxx.users.otp.dto.OtpChallengeDto;
 import io.cvvexxx.users.token.dto.TokenPairDto;
 
@@ -14,4 +16,6 @@ public interface AuthService {
     TokenPairDto refresh(String refreshToken);
 
     void logout(String refreshToken);
+
+    ServiceTokenResponseDto getServiceToken(ServiceTokenRequestDto dto);
 }

@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Validated//Приложение не запуститься, если не пройдет валидация(@NotBlank над issuer)
 @ConfigurationProperties(prefix = "app.jwt") //Читает app.jwt.* из .properties, как pydantic BaseSettings
@@ -19,7 +20,9 @@ public record JwtProperties(
 
         String keyId,
 
-        String privateKeyLocation
+        String privateKeyLocation,
+
+        Map<String, String> serviceClients
 ) {
     public JwtProperties {
         if (audience == null || audience.isBlank()) {
@@ -33,6 +36,9 @@ public record JwtProperties(
         }
         if (keyId == null || keyId.isBlank()) {
             keyId = "user-service-key";
+        }
+        if (serviceClients == null) {
+            serviceClients = Map.of();
         }
     }
 }

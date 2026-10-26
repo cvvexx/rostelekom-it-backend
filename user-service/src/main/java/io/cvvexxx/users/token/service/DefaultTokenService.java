@@ -1,5 +1,6 @@
 package io.cvvexxx.users.token.service;
 
+import io.cvvexxx.users.auth.dto.ServiceTokenResponseDto;
 import io.cvvexxx.users.token.config.JwtProperties;
 import io.cvvexxx.users.token.dto.TokenPairDto;
 import io.cvvexxx.users.token.entity.RefreshToken;
@@ -9,6 +10,7 @@ import io.cvvexxx.users.user.entity.Role;
 import io.cvvexxx.users.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -101,7 +103,26 @@ public class DefaultTokenService implements TokenService {
                 .ifPresent(token -> token.setRevokedAt(Instant.now()));//Отзываем refresh токен при logout'е
     }
 
+    @Override
+    public ServiceTokenResponseDto issueServiceToken(String clientId, String clientSecret) {
+        String expected = jwtProperties.serviceClients().get(clientId);
+        //Пустой секрет (env не задан) не принимаем, иначе пустой clientSecret пройдет проверку.
+        //MessageDigest.isEqual сравнивает за постоянное время, чтобы секрет нельзя было подобрать по времени ответа
+        if (expected == null || expected.isBlank()
+                || !MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), clientSecret.getBytes(StandardCharsets.UTF_8))) {
+            throw new BadCredentialsException("Invalid service client credentials");//GlobalExceptionHandler отдаст 401
+        }
+
+        //sub вида service:billing-service, роль SERVICE -> на ресурсах проверяется через hasRole("SERVICE")
+        String token = encodeAccessToken("service:" + clientId, List.of("SERVICE"), Instant.now());
+        return new ServiceTokenResponseDto(token, jwtProperties.accessTokenTtl().toSeconds());
+    }
+
     private String buildAccessToken(User user, Instant now) {
+        return encodeAccessToken(user.getId().toString(), user.getRoles().stream().map(Role::name).toList(), now);
+    }
+
+    private String encodeAccessToken(String subject, List<String> roles, Instant now) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 //ТОКЕН МОЖЕТЕ РАСПАРСИТЬ на сайте JWT.IO, чтобы посмотреть че в него входит
 
@@ -109,16 +130,16 @@ public class DefaultTokenService implements TokenService {
                 .issuer(jwtProperties.issuer())
                 //Те, для кого выпускаются токены, ща rostelekom
                 .audience(List.of(jwtProperties.audience()))
-                //sub - айди юзера
-                .subject(user.getId().toString())
+                //sub - айди юзера или service:<имя> для сервисного токена
+                .subject(subject)
                 //Выпущен в
                 .issuedAt(now)
                 //Истекает в
                 .expiresAt(now.plus(jwtProperties.accessTokenTtl()))
                 //Уникальный id токена
                 .id(UUID.randomUUID().toString())
-                //Поле в токене, роли юзера списком
-                .claim("roles", user.getRoles().stream().map(Role::name).toList())
+                //Поле в токене, роли списком
+                .claim("roles", roles)
                 .build();
 
         //Алгоритм подписи токена для его последующей проверки на подлинность
