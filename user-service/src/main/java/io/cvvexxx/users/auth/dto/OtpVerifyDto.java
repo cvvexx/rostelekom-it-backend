@@ -17,12 +17,18 @@ public record OtpVerifyDto(
         String code,
 
         @Size(max = 100, message = "{validation.full-name.last-name.too-long}")
+        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.last-name.pattern}")
         String lastName,
 
         @Size(max = 100, message = "{validation.full-name.first-name.too-long}")
+        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.first-name.pattern}")
         String firstName,
 
         @Size(max = 100, message = "{validation.full-name.middle-name.too-long}")
+        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.middle-name.pattern}")
         String middleName
 ) {
+    //Буквы любого алфавита, между ними пробел, дефис или апостроф
+    //Пустая строка проходит: обязательность проверяет DefaultAuthService, пустое отчество станет null
+    private static final String NAME_PATTERN = "\\s*(\\p{L}+([ '’-]\\p{L}+)*)?\\s*";
 }
