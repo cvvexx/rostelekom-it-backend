@@ -33,10 +33,10 @@ class ServiceTokenIT {
     @Test
     @DisplayName("Верный секрет: выдаём подписанный токен с ролью SERVICE")
     void validCredentials_issuesServiceToken() throws Exception {
-        String body = request("billing-service", "test-billing-secret", status().isOk());
+        String body = request("test-service", "test-service-secret", status().isOk());
 
         Jwt jwt = jwtDecoder.decode(objectMapper.readTree(body).get("accessToken").asText());
-        assertThat(jwt.getSubject()).isEqualTo("service:billing-service");
+        assertThat(jwt.getSubject()).isEqualTo("service:test-service");
         assertThat(jwt.getClaimAsStringList("roles")).containsExactly("SERVICE");
         assertThat(objectMapper.readTree(body).get("expiresInSeconds").asLong()).isEqualTo(900);
     }
@@ -45,7 +45,7 @@ class ServiceTokenIT {
     @DisplayName("Неверный секрет, неизвестный клиент или клиент без секрета: 401")
     void invalidCredentials_returns401() throws Exception {
         request("billing-service", "wrong", status().isUnauthorized());
-        request("unknown-service", "test-billing-secret", status().isUnauthorized());
+        request("unknown-service", "test-service-secret", status().isUnauthorized());
         request("unconfigured-service", " x", status().isUnauthorized());
     }
 

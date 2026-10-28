@@ -26,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -71,8 +70,29 @@ class PhoneAuthFlowIT {
         assertThat(userRepository.count()).isEqualTo(1);
         User saved = userRepository.findByPhone(PHONE).orElseThrow();
         assertThat(saved.getId().toString()).isEqualTo(tokens.get("userId").asText());
-        assertThat(saved.getUsername()).isNull();
         assertThat(saved.getRoles()).containsExactly(Role.USER);
+    }
+
+    @Test
+    @DisplayName("Регистрация: /otp/request подсказывает registered, без ФИО 400 и код не сгорает, ФИО сохраняется")
+    void registration_requiresFullName() throws Exception {
+        JsonNode challenge = requestOtp(PHONE);
+        assertThat(challenge.get("registered").asBoolean()).isFalse();
+        String code = challenge.get("code").asText();
+
+        verifyOtp("""
+                {"phone": "%s", "code": "%s", "lastName": "Иванов"}
+                """.formatted(PHONE, code), status().isBadRequest());
+        assertThat(userRepository.count()).isZero();
+
+        verifyOtp(PHONE, code, status().isOk());//Тот же код всё ещё валиден
+        User saved = userRepository.findByPhone(PHONE).orElseThrow();
+        assertThat(saved.getLastName()).isEqualTo("Иванов");
+        assertThat(saved.getFirstName()).isEqualTo("Иван");
+        assertThat(saved.getMiddleName()).isEqualTo("Иванович");
+
+        ((InMemoryOtpStore) otpStore).clear();//Сбрасываем resend-cooldown
+        assertThat(requestOtp(PHONE).get("registered").asBoolean()).isTrue();
     }
 
     @Test
@@ -96,18 +116,10 @@ class PhoneAuthFlowIT {
         mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.phone").value(PHONE))
+                .andExpect(jsonPath("$.lastName").value("Иванов"))
+                .andExpect(jsonPath("$.firstName").value("Иван"))
+                .andExpect(jsonPath("$.middleName").value("Иванович"))
                 .andExpect(jsonPath("$.username").doesNotExist());
-
-        mockMvc.perform(patch("/api/users/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username": " JohnDoe ", "firstName": " John ", "lastName": " Doe "}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("johndoe"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"));
     }
 
     @Test
@@ -154,7 +166,7 @@ class PhoneAuthFlowIT {
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "%s"}
+                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван"}
                                 """.formatted(PHONE, wrong)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Неверный код"))
@@ -269,7 +281,7 @@ class PhoneAuthFlowIT {
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "123456"}
+                                {"phone": "%s", "code": "123456", "lastName": "Иванов", "firstName": "Иван"}
                                 """.formatted(PHONE)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.reason").value("NOT_REQUESTED"))
@@ -277,7 +289,7 @@ class PhoneAuthFlowIT {
     }
 
     @Test
-    @DisplayName("Ошибки валидации входа, refresh и обновления профиля отдаются текстом из messages.properties")
+    @DisplayName("Ошибки валидации входа и refresh отдаются текстом из messages.properties")
     void validationMessages_areResolved() throws Exception {
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -293,43 +305,13 @@ class PhoneAuthFlowIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.refreshToken").value("Refresh-токен обязателен"));
 
-        String accessToken = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
-                .get("accessToken").asText();
-        mockMvc.perform(patch("/api/users/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+        mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username": "ab", "firstName": "%s"}
-                                """.formatted("x".repeat(101))))
+                                {"phone": "%s", "code": "123456", "firstName": "%s"}
+                                """.formatted(PHONE, "x".repeat(101))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.username").value("Username должен быть от 3 до 20 символов"))
                 .andExpect(jsonPath("$.errors.firstName").value("Имя слишком длинное"));
-    }
-
-    @Test
-    @DisplayName("Занятый username — 409, кавычки в тексте ошибки на месте")
-    void updateProfile_takenUsername_returns409() throws Exception {
-        String first = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
-                .get("accessToken").asText();
-        String secondPhone = "+79997654321";
-        String second = verifyOtp(secondPhone, requestOtp(secondPhone).get("code").asText(), status().isOk())
-                .get("accessToken").asText();
-
-        mockMvc.perform(patch("/api/users/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + first)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username": "johndoe"}
-                                """))
-                .andExpect(status().isOk());
-        mockMvc.perform(patch("/api/users/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + second)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username": "johndoe"}
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Пользователь с username 'johndoe' уже существует"));
     }
 
     @Test
@@ -361,12 +343,17 @@ class PhoneAuthFlowIT {
         return objectMapper.readTree(body);
     }
 
+    //ФИО шлём всегда: для нового номера оно обязательно, для существующего игнорируется
     private JsonNode verifyOtp(String phone, String code, ResultMatcher expectedStatus) throws Exception {
+        return verifyOtp("""
+                {"phone": "%s", "code": "%s", "lastName": " Иванов ", "firstName": "Иван", "middleName": "Иванович"}
+                """.formatted(phone, code), expectedStatus);
+    }
+
+    private JsonNode verifyOtp(String json, ResultMatcher expectedStatus) throws Exception {
         String body = mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"phone": "%s", "code": "%s"}
-                                """.formatted(phone, code)))
+                        .content(json))
                 .andExpect(expectedStatus)
                 .andReturn().getResponse().getContentAsString();
 

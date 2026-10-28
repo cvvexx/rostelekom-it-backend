@@ -4,6 +4,7 @@ import io.cvvexxx.users.auth.dto.OtpRequestDto;
 import io.cvvexxx.users.auth.dto.OtpVerifyDto;
 import io.cvvexxx.users.auth.dto.ServiceTokenRequestDto;
 import io.cvvexxx.users.auth.dto.ServiceTokenResponseDto;
+import io.cvvexxx.users.auth.exception.FullNameRequiredException;
 import io.cvvexxx.users.otp.dto.OtpChallengeDto;
 import io.cvvexxx.users.otp.service.OtpService;
 import io.cvvexxx.users.phone.PhoneNumbersUtils;
@@ -30,19 +31,31 @@ public class DefaultAuthService implements AuthService {
         String phone = PhoneNumbersUtils.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
         log.info("OTP requested for phone {}", PhoneNumbersUtils.mask(phone));//Логируем для дебага, также скрываем часть номера
 
-        return otpService.requestCode(phone);
+        //registered подсказывает фронту, надо ли спрашивать ФИО
+        return otpService.requestCode(phone)
+                .withRegistered(userService.existsByPhone(phone));
     }
 
     @Override
     @Transactional//Открываем транзакцию в бд (как async with session.begin()), при RuntimeException будет rollback
     public TokenPairDto verifyOtp(OtpVerifyDto dto) {
         String phone = PhoneNumbersUtils.normalize(dto.phone());//Приводим пользовательский ввод к нормальному виду через класс-утилиту
+        //Регистрация (новый номер) только с фамилией и именем. Проверяем ДО проверки кода,
+        //чтобы код не сгорел и фронт мог повторить запрос с ФИО
+        if (!userService.existsByPhone(phone) && (isBlank(dto.lastName()) || isBlank(dto.firstName()))) {
+            throw new FullNameRequiredException("registration.full-name-required");
+        }
         otpService.verifyCode(phone, dto.code());//Верифицируем код, если чето не так -> выбрасываем exception и завершаем работу метода
 
-        User user = userService.findOrCreateByPhone(phone);//Получаем/создаем юзера по номеру телефона
+        //Получаем/создаем юзера по номеру телефона, ФИО применяется только при создании
+        User user = userService.findOrCreateByPhone(phone, dto.lastName(), dto.firstName(), dto.middleName());
         log.info("User {} authenticated by phone {}", user.getId(), PhoneNumbersUtils.mask(phone));//Логируем вход юзера
 
         return tokenService.issueTokens(user);//Возвращаем токены для определенного юзера
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     @Override
