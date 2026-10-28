@@ -6,8 +6,11 @@ import io.cvvexxx.billings.payment.dto.PaymentDto;
 import io.cvvexxx.billings.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+import io.cvvexxx.billings.advice.InvalidSortException;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 //Контроллер платежей (пополнение счёта)
@@ -24,6 +28,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/billing/payments")
 public class PaymentController {
+
+    //Поля, по которым фронт может сортировать список платежей
+    private static final Set<String> SORT_FIELDS = Set.of("createdAt", "amount", "status");
 
     private final PaymentService paymentService;
 
@@ -73,8 +80,9 @@ public class PaymentController {
     @GetMapping
     public ResponseEntity<PagedModel<PaymentDto>> getMyPayments(
             @AuthenticationPrincipal Jwt jwt,
-            @PageableDefault(size = 20) Pageable pageable
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        InvalidSortException.requireAllowed(pageable, SORT_FIELDS);
         return ResponseEntity.ok(new PagedModel<>(paymentService.getMyPayments(currentUserId(jwt), pageable)));
     }
 

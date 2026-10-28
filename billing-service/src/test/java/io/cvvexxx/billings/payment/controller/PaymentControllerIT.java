@@ -1,11 +1,14 @@
 package io.cvvexxx.billings.payment.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import io.cvvexxx.billings.payment.provider.ProviderStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import io.cvvexxx.billings.payment.entity.PaymentStatus;
+import io.cvvexxx.billings.payment.provider.stub.StubPaymentProvider;
 import io.cvvexxx.billings.payment.service.PaymentService;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,6 +16,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -29,6 +33,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,6 +66,9 @@ class PaymentControllerIT {
     private JdbcTemplate jdbc;
     @Autowired
     private PaymentService paymentService;
+    //Spy: ведёт себя как настоящая заглушка, но в отдельных тестах можно подменить ответ провайдера
+    @MockitoSpyBean
+    private StubPaymentProvider stubPaymentProvider;
 
     @Test
     @DisplayName("POST: создаёт платёж в статусе PENDING, баланс не меняется")
@@ -130,14 +138,15 @@ class PaymentControllerIT {
     }
 
     @Test
-    @DisplayName("POST: невалидная сумма — 400 с ошибкой по полю amount")
+    @DisplayName("POST: невалидная сумма — 400 с одной ошибкой по полю amount")
     void createPayment_invalidAmount_returns400() throws Exception {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
 
         Map<String, String> expectedErrors = Map.of(
-                "0", "Сумма платежа должна быть больше нуля",
-                "-5.00", "Сумма платежа должна быть больше нуля",
+                "0", "Сумма платежа не должна быть меньше 1.00",
+                "-5.00", "Сумма платежа не должна быть меньше 1.00",
+                "0.99", "Сумма платежа не должна быть меньше 1.00",
                 "10.555", "Сумма платежа должна содержать не больше 17 цифр в целой части и 2 после запятой",
                 "null", "Сумма платежа обязательна");
 
@@ -159,6 +168,16 @@ class PaymentControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\": 10.00}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST: минимальная сумма 1.00 проходит")
+    void createPayment_minAmount_returns200() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+
+        createPayment(userId, UUID.randomUUID().toString(), "1.00")
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -239,6 +258,27 @@ class PaymentControllerIT {
     }
 
     @Test
+    @DisplayName("GET: sort только по разрешённым полям, остальное -> 400")
+    void getMyPayments_sortWhitelist() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        OffsetDateTime now = OffsetDateTime.now();
+        insertPayment(accountId, "300.00", now.minusHours(1));
+        insertPayment(accountId, "100.00", now);
+
+        mockMvc.perform(get(PAYMENTS).param("sort", "amount,asc").with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].amount").value(100.00))
+                .andExpect(jsonPath("$.content[1].amount").value(300.00));
+
+        mockMvc.perform(get(PAYMENTS).param("sort", "[\"string\"]").with(user(userId)))
+                .andExpect(status().isBadRequest());
+        //Поле есть в сущности, но не в списке разрешённых
+        mockMvc.perform(get(PAYMENTS).param("sort", "idempotencyKey").with(user(userId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("Оплата через заглушку провайдера: SUCCEEDED, баланс пополнен, повторный webhook не зачисляет второй раз")
     void stubPay_creditsBalanceOnce() throws Exception {
         UUID userId = UUID.randomUUID();
@@ -310,8 +350,8 @@ class PaymentControllerIT {
     }
 
     @Test
-    @DisplayName("POST /{id}/cancel: CANCELED, повтор — 200, подтвердить отменённый (админом или webhook'ом) — 409")
-    void cancelPayment_thenConfirm_returns409() throws Exception {
+    @DisplayName("POST /{id}/cancel: CANCELED, повтор — 200, админ подтвердить не может — 409, а оплату у провайдера зачисляем")
+    void cancelPayment_thenConfirm_adminConflict_providerPaymentCredited() throws Exception {
         UUID userId = UUID.randomUUID();
         openAccount(userId);
         String paymentId = createPaymentId(userId, "10.00");
@@ -325,9 +365,46 @@ class PaymentControllerIT {
         confirm(admin(), paymentId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " находится в статусе CANCELED"));
-        mockMvc.perform(post(confirmationUrl(userId, paymentId)).with(user(userId)))
-                .andExpect(status().isConflict());
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(0));
 
+        //Юзер всё равно заплатил по выданной ссылке: деньги у провайдера, значит зачисляем
+        mockMvc.perform(post(confirmationUrl(userId, paymentId)).with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(10.00));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: юзер оплатил до отмены, а webhook ещё не пришёл — зачисляем вместо отмены")
+    void cancelPayment_paidAtProvider_creditsInsteadOfCancel() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        stubPaymentProvider.markPaid("stub-" + paymentId);
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
+                .andExpect(jsonPath("$.balance").value(10.00));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/cancel: провайдер не смог отменить — 409, платёж остаётся PENDING")
+    void cancelPayment_providerCannotCancel_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        doReturn(ProviderStatus.PENDING).when(stubPaymentProvider).cancel("stub-" + paymentId);
+
+        cancel(user(userId), paymentId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Платёж " + paymentId + " пока нельзя отменить, попробуйте позже"));
+
+        mockMvc.perform(get(PAYMENTS + "/" + paymentId).with(user(userId)))
+                .andExpect(jsonPath("$.status").value("PENDING"));
         mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
                 .andExpect(jsonPath("$.balance").value(0));
     }
@@ -356,6 +433,25 @@ class PaymentControllerIT {
         confirm(admin(), paymentId)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("Счёт с id " + accountId + " закрыт"));
+
+        assertEquals(0, jdbc.queryForObject(
+                "select balance from accounts where id = ?", BigDecimal.class, accountId).signum());
+    }
+
+    @Test
+    @DisplayName("Оплата у провайдера на закрытый счёт: REFUND_REQUIRED, баланс не меняется, отменить нельзя")
+    void stubPay_closedAccount_marksRefundRequired() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = openAccount(userId);
+        String paymentId = createPaymentId(userId, "10.00");
+        String confirmationUrl = confirmationUrl(userId, paymentId);
+        setStatus(accountId, "CLOSED");
+
+        mockMvc.perform(post(confirmationUrl).with(user(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUND_REQUIRED"));
+        cancel(user(userId), paymentId)
+                .andExpect(status().isConflict());
 
         assertEquals(0, jdbc.queryForObject(
                 "select balance from accounts where id = ?", BigDecimal.class, accountId).signum());

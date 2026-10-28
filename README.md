@@ -58,23 +58,23 @@ Swagger открывается напрямую на сервисе, а не ч�
 
 | Запрос | Тело | Ответ |
 |---|---|---|
-| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds }` — `code` приходит только в dev |
-| `POST /api/auth/otp/verify` | `{ "phone", "code" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
+| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds, registered }` — `code` приходит только в dev |
+| `POST /api/auth/otp/verify` | `{ "phone", "code", "lastName", "firstName", "middleName" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
 | `POST /api/auth/refresh` | `{ "refreshToken" }` | новая пара токенов |
 | `POST /api/auth/logout` | `{ "refreshToken" }` | `204` |
 
 - Access-токен живёт 15 минут, refresh — 30 дней.
 - **Refresh одноразовый.** После `/refresh` сохраняй новую пару и выбрасывай старую. Повторное использование старого refresh завершает **все** сессии юзера. Если фронт открыт в нескольких вкладках, refresh должен делать кто-то один, иначе юзера будет выкидывать.
+- **Регистрация.** Если `/otp/request` вернул `registered: false`, номер новый: покажи поля ФИО рядом с полем кода. Для нового номера `lastName` и `firstName` обязательны (до 100 символов), `middleName` — по желанию. Без них `/otp/verify` вернёт `400`, код при этом не сгорает. Для зарегистрированного номера ФИО не нужно и игнорируется.
 - Повторно запросить код можно через `resendAfterSeconds`. При частых запросах придёт `429` с заголовком `Retry-After`.
 
 ### Профиль
 
 | Запрос | Тело | Ответ |
 |---|---|---|
-| `GET /api/users/me` | — | `{ id, phone, username, firstName, lastName }` |
-| `PATCH /api/users/me` | любые из `username` (3–20 символов), `firstName`, `lastName` (до 100) | обновлённый профиль |
+| `GET /api/users/me` | — | `{ id, phone, lastName, firstName, middleName }` |
 
-Телефон через профиль поменять нельзя.
+Профиль только для чтения: ФИО задаётся при регистрации.
 
 ### Счёт и баланс
 

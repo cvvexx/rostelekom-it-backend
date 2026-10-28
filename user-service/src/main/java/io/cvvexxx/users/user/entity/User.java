@@ -34,14 +34,14 @@ public class User {
 
     //Аннотация, которая показывает в какую колонку мапится поле и какие ограничения есть у него, если не указать
     //name, то будет сопоставляться аналогичное название колонки, колонка не нашлась - программа не запуститься
-    @Column(unique = true, length = 20)
-    private String username;
-
     @Column(name = "first_name", length = 100)
     private String firstName;
 
     @Column(name = "last_name", length = 100)
     private String lastName;
+
+    @Column(name = "middle_name", length = 100)
+    private String middleName;
 
     //Роли лежат в отдельной таблице user_roles(user_id, role), а в Java это просто Set<Role>
     @ElementCollection(fetch = FetchType.EAGER) //Коллекция простых значений, не сущностей. EAGER - роли грузятся сразу вместе с юзером

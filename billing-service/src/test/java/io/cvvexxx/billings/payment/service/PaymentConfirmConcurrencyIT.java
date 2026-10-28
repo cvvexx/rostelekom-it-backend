@@ -1,5 +1,8 @@
 package io.cvvexxx.billings.payment.service;
 
+import io.cvvexxx.billings.account.entity.AccountStatus;
+import io.cvvexxx.billings.account.exception.AccountClosedException;
+import io.cvvexxx.billings.account.exception.AccountHasPendingPaymentsException;
 import io.cvvexxx.billings.account.service.AccountService;
 import io.cvvexxx.billings.payment.dto.PaymentDto;
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
@@ -133,6 +136,35 @@ class PaymentConfirmConcurrencyIT {
         } else {
             assertThat(balance(accountId)).isEqualByComparingTo("0");
             assertThat(topUps(accountId)).isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("Параллельные создание платежей и закрытие счёта: закрытый счёт никогда не остаётся с неоплаченным платежом")
+    void parallelCreatePaymentAndClose_noPendingOnClosedAccount() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = accountService.openAccount(userId).account().id();
+
+        List<Object> results = runInParallel(i -> i == 0
+                ? () -> {
+                    accountService.changeStatus(accountId, AccountStatus.CLOSED);
+                    return null;
+                }
+                : () -> paymentService.createPayment(userId, new BigDecimal("10.00"), UUID.randomUUID().toString()));
+
+        //Каждый поток либо отработал, либо получил ожидаемый отказ: платёж на закрытый счёт или закрытие с неоплаченными
+        assertThat(results).allSatisfy(r -> {
+            if (r instanceof Throwable) {
+                assertThat(r).isInstanceOfAny(AccountClosedException.class, AccountHasPendingPaymentsException.class);
+            }
+        });
+        String accountStatus = jdbc.queryForObject("select status from accounts where id = ?", String.class, accountId);
+        Integer pending = jdbc.queryForObject(
+                "select count(*) from payments where account_id = ? and status = 'PENDING'", Integer.class, accountId);
+        if ("CLOSED".equals(accountStatus)) {
+            assertThat(pending).isZero();
+        } else {
+            assertThat(pending).isPositive();
         }
     }
 

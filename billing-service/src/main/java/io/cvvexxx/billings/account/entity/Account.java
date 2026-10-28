@@ -48,9 +48,6 @@ public class Account {
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
 
-    @Version //Optimistic lock: если строку параллельно изменили, Hibernate выбросит исключение
-    private Long version;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private Instant createdAt;

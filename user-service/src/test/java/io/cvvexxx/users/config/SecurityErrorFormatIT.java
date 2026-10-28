@@ -166,7 +166,7 @@ class SecurityErrorFormatIT {
         String tokens = mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "%s"}
+                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван"}
                                 """.formatted(PHONE, code)))
                 .andReturn().getResponse().getContentAsString();
 

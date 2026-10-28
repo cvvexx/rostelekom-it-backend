@@ -3,6 +3,7 @@ package io.cvvexxx.billings.payment.provider.stub;
 import io.cvvexxx.billings.payment.provider.ProviderPayment;
 
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
+import io.cvvexxx.billings.payment.provider.ProviderStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -34,10 +35,10 @@ class StubPaymentProviderTest {
         String paid = provider.create(UUID.randomUUID(), BigDecimal.TEN, "RUB", "k1").providerPaymentId();
         String other = provider.create(UUID.randomUUID(), BigDecimal.TEN, "RUB", "k2").providerPaymentId();
 
-        assertThat(provider.fetchStatus(paid)).isEqualTo(PaymentStatus.PENDING);
+        assertThat(provider.fetchStatus(paid)).isEqualTo(ProviderStatus.PENDING);
         provider.markPaid(paid);
 
-        assertThat(provider.fetchStatus(paid)).isEqualTo(PaymentStatus.SUCCEEDED);
-        assertThat(provider.fetchStatus(other)).isEqualTo(PaymentStatus.PENDING);
+        assertThat(provider.fetchStatus(paid)).isEqualTo(ProviderStatus.SUCCEEDED);
+        assertThat(provider.fetchStatus(other)).isEqualTo(ProviderStatus.PENDING);
     }
 }

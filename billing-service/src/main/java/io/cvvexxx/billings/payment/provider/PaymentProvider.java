@@ -14,5 +14,9 @@ public interface PaymentProvider {
     ProviderPayment create(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey);
 
     //Спрашивает у провайдера актуальный статус платежа
-    PaymentStatus fetchStatus(String providerPaymentId);
+    ProviderStatus fetchStatus(String providerPaymentId);
+
+    //Просит провайдера отменить платёж, возвращает итоговый статус у провайдера.
+    //SUCCEEDED - юзер успел оплатить и деньги уже у провайдера, PENDING - провайдер отменить не смог
+    ProviderStatus cancel(String providerPaymentId);
 }
