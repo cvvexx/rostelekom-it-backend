@@ -14,6 +14,7 @@ import io.cvvexxx.billings.payment.exception.PaymentNotFoundException;
 import io.cvvexxx.billings.payment.exception.PaymentStatusConflictException;
 import io.cvvexxx.billings.payment.provider.PaymentProvider;
 import io.cvvexxx.billings.payment.provider.ProviderPayment;
+import io.cvvexxx.billings.payment.provider.ProviderStatus;
 import io.cvvexxx.billings.payment.repository.PaymentRepository;
 import io.cvvexxx.billings.transaction.entity.Transaction;
 import io.cvvexxx.billings.transaction.entity.TransactionType;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -35,45 +37,60 @@ public class PaymentService {
 
     private final static String RUB_CURRENCY = "RUB";
 
+    private final TransactionTemplate transactionTemplate;
     private final PaymentRepository paymentRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentProvider paymentProvider;
 
-    @Transactional
+    //Без @Transactional: провайдер вызывается между двумя короткими транзакциями
     public PaymentDto createPayment(
             UUID userId, BigDecimal amount, String idempotencyKey
     ) {
-        Account account = findAccountByUserIdForUpdate(userId);//С блокировкой счёта, чтобы платёж не создался параллельно с его закрытием
+        //1. Коммитим платёж до похода к провайдеру: повтор с тем же ключом найдёт этот же paymentId,
+        //и идемпотентный ответ провайдера привяжется к нему. Блокировки отпускаются сразу после коммита
+        Payment payment = transactionTemplate.execute(status -> {
+            Account account = findAccountByUserIdForUpdate(userId);//С блокировкой счёта, чтобы платёж не создался параллельно с его закрытием
 
-        if (account.getStatus() == AccountStatus.CLOSED) {
-            throw new AccountClosedException("account.closed", account.getId());
+            if (account.getStatus() == AccountStatus.CLOSED) {
+                throw new AccountClosedException("account.closed", account.getId());
+            }
+
+            //Если платёж с таким ключом уже есть, вставка ничего не сделает и ниже прочитаем существующий
+            paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, paymentProvider.name(), idempotencyKey);
+
+            Payment existing = paymentRepository.findByAccountIdAndIdempotencyKey(account.getId(), idempotencyKey)
+                    .orElseThrow(() -> new PaymentNotFoundException(
+                            "payment.not-found-by-idempotency-key", account.getId(), idempotencyKey));
+
+            //Ключ тот же, а сумма другая - значит это другой запрос, отклоняем
+            if (existing.getAmount().compareTo(amount) != 0) {
+                throw new IdempotencyKeyReusedException(
+                        "payment.idempotency-key-reused", idempotencyKey, existing.getAmount().toPlainString()
+                );
+            }
+            return existing;
+        });
+
+        if (payment.getProviderPaymentId() != null) {//Повтор запроса - ссылка уже есть
+            return toDto(payment);
         }
 
-        //Если платёж с таким ключом уже есть, вставка ничего не сделает и ниже прочитаем существующий
-        paymentRepository.insertIfAbsent(account.getId(), amount, RUB_CURRENCY, paymentProvider.name(), idempotencyKey);
+        //2. Провайдер вне транзакции. Если упадёт - платёж останется без providerPaymentId,
+        //повтор с тем же ключом пойдёт к провайдеру с тем же paymentId, а зависший добьёт джоба
+        ProviderPayment providerPayment = paymentProvider.create(
+                payment.getId(), payment.getAmount(), payment.getCurrency(), idempotencyKey
+        );
 
-        Payment payment = paymentRepository.findByAccountIdAndIdempotencyKey(account.getId(), idempotencyKey)
-                .orElseThrow(() -> new PaymentNotFoundException(
-                        "payment.not-found-by-idempotency-key", account.getId(), idempotencyKey));
-
-        //Ключ тот же, а сумма другая - значит это другой запрос, отклоняем
-        if (payment.getAmount().compareTo(amount) != 0) {
-            throw new IdempotencyKeyReusedException(
-                    "payment.idempotency-key-reused", idempotencyKey, payment.getAmount().toPlainString()
-            );
-        }
-
-        //При создании платежа отдаем на фронт ссылку на оплату и добавляем в бд ссылку + айдишник платежа в базе провайдера
-        if (payment.getProviderPaymentId() == null) {
-            ProviderPayment providerPayment = paymentProvider.create(//TODO(вынести обращение к провайдеру из транзакции)
-                    payment.getId(), payment.getAmount(), payment.getCurrency(), idempotencyKey
-            );
-            payment.setProviderPaymentId(providerPayment.providerPaymentId());
-            payment.setConfirmationUrl(providerPayment.confirmationUrl());
-        }
-
-        return toDto(payment);
+        //3. Сохраняем ссылку и айдишник провайдера. Статус не проверяем: даже если джоба успела отменить платёж,
+        //providerPaymentId нужен, чтобы webhook нашёл платёж, если юзер всё же оплатит
+        return transactionTemplate.execute(status -> {
+            Payment locked = paymentRepository.findByIdForUpdate(payment.getId())
+                    .orElseThrow(() -> new PaymentNotFoundException("payment.not-found", payment.getId()));
+            locked.setProviderPaymentId(providerPayment.providerPaymentId());
+            locked.setConfirmationUrl(providerPayment.confirmationUrl());
+            return toDto(locked);
+        });
     }
 
     @Transactional(readOnly = true)
@@ -100,17 +117,20 @@ public class PaymentService {
     }
 
     //Провайдер сообщил об изменении платежа. Статусу из запроса не верим, а перепроверяем у провайдера
-    @Transactional
     public PaymentDto handleProviderNotification(String providerPaymentId) {
-        Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(paymentProvider.name(), providerPaymentId)
-                .orElseThrow(() -> new PaymentNotFoundException(
-                        "payment.not-found-by-provider", paymentProvider.name(), providerPaymentId));
+        ProviderStatus providerStatus = paymentProvider.fetchStatus(providerPaymentId);
 
-        return switch (paymentProvider.fetchStatus(providerPaymentId)) {
-            case SUCCEEDED -> succeed(payment, true);//Деньги у провайдера - зачисляем, даже если у нас платёж уже отменён
-            case CANCELED -> cancel(payment);//Если отменен, то отменяем платеж и у нас
-            case PENDING -> toDto(payment);//Если до сих пор на рассмотрении, то просто возращаем платеж
-        };
+        return transactionTemplate.execute(status -> {
+            Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(paymentProvider.name(), providerPaymentId)
+                    .orElseThrow(() -> new PaymentNotFoundException(
+                            "payment.not-found-by-provider", paymentProvider.name(), providerPaymentId));
+            return switch (providerStatus) {
+                case SUCCEEDED ->
+                        succeed(payment, true);//Деньги у провайдера - зачисляем, даже если у нас платёж уже отменён
+                case CANCELED -> cancel(payment);//Если отменен, то отменяем платеж и у нас
+                case PENDING -> toDto(payment);//Если до сих пор на рассмотрении, то просто возращаем платеж
+            };
+        });
     }
 
     @Transactional
