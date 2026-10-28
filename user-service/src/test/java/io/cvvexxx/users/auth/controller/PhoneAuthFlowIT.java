@@ -204,6 +204,22 @@ class PhoneAuthFlowIT {
     }
 
     @Test
+    @DisplayName("Регистрация: имя с цифрами — 400 с текстом из messages.properties, пользователь не создан")
+    void registration_nameWithDigits_returns400() throws Exception {
+        String code = requestOtp(PHONE).get("code").asText();
+
+        mockMvc.perform(post("/api/auth/otp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван2"}
+                                """.formatted(PHONE, code)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.firstName")
+                        .value("Имя может содержать только буквы, пробел, дефис и апостроф"));
+        assertThat(userRepository.count()).isZero();
+    }
+
+    @Test
     @DisplayName("Пустой телефон — 400 с текстом ошибки валидации из messages.properties")
     void blankPhone_returnsLocalizedValidationMessage() throws Exception {
         mockMvc.perform(post("/api/auth/otp/request")
