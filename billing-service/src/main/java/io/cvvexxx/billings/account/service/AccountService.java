@@ -41,10 +41,10 @@ public class AccountService {
         return new OpenAccountResult(toDto(findAccount(userId)), created);
     }
 
-    //Счёт открывается при первом запросе, чтобы фронту не нужно было отдельно вызывать POST
-    @Transactional
+    //Счёта нет — 404, фронт сам решает, открывать ли его через POST
+    @Transactional(readOnly = true)
     public AccountDto getMyAccount(UUID userId) {
-        return openAccount(userId).account();
+        return toDto(findAccount(userId));
     }
 
     @Transactional(readOnly = true)

@@ -150,17 +150,15 @@ class AccountControllerIT {
     }
 
     @Test
-    @DisplayName("GET /me: счёта нет — открывается автоматически, повторный запрос возвращает тот же счёт")
-    void getMyAccount_withoutAccount_opensAccount() throws Exception {
+    @DisplayName("GET /me: счёта нет — 404, счёт не создаётся")
+    void getMyAccount_withoutAccount_returns404() throws Exception {
         UUID userId = UUID.randomUUID();
-        String first = mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.balance").value(0))
-                .andReturn().getResponse().getContentAsString();
-
         mockMvc.perform(get(ACCOUNTS + "/me").with(user(userId)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(JsonPath.<String>read(first, "$.id")));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Счёт пользователя " + userId + " не найден"));
+
+        mockMvc.perform(post(ACCOUNTS).with(user(userId)))
+                .andExpect(status().isCreated());
     }
 
     @Test
