@@ -2,16 +2,21 @@ package io.cvvexxx.gatewayservice.config;
 
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+
+import java.time.Duration;
 
 @Configuration //Класс-конфиг: при старте Spring вызовет все @Bean-методы внутри и сохранит их результаты
 public class SecurityBeans {
@@ -23,7 +28,11 @@ public class SecurityBeans {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthenticationEntryPoint authenticationEntryPoint,
-            AccessDeniedHandler accessDeniedHandler
+            AccessDeniedHandler accessDeniedHandler,
+            StringRedisTemplate redis,
+            @Value("${rostelekom.rate-limit.capacity}") long rateLimitCapacity,
+            @Value("${rostelekom.rate-limit.window}") Duration rateLimitWindow,
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver
     ) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,6 +52,11 @@ public class SecurityBeans {
                         .jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
+                //Не через @Component, иначе Spring зарегистрирует фильтр ещё и вне security и он сработает дважды
+                .addFilterAfter(
+                        new RateLimitFilter(redis, rateLimitCapacity, rateLimitWindow, handlerExceptionResolver),
+                        BearerTokenAuthenticationFilter.class
+                )
                 .exceptionHandling(
                         exceptions -> exceptions
                                 .authenticationEntryPoint(authenticationEntryPoint)

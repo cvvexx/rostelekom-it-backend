@@ -1,5 +1,6 @@
 package io.cvvexxx.gatewayservice.advice;
 
+import io.cvvexxx.gatewayservice.config.RateLimitExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
@@ -39,6 +40,12 @@ public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleAccessDenied(AccessDeniedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
                 message("error.forbidden"));
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class) //Слишком много запросов, HTTP 429
+    public ProblemDetail handleRateLimit(RateLimitExceededException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
+                message("error.too-many-requests"));
     }
 
     //Всё, что не поймали выше: клиенту 500 без подробностей, стектрейс только в лог
