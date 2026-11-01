@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiBeans {
 
+    //TODO(УБрать и подключить через зависимость)
     public static final String BEARER_AUTH = "bearerAuth";
 
     @Bean

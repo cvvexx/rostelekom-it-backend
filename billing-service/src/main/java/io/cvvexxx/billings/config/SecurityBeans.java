@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Configuration
 public class SecurityBeans {
 
+    //TODO(ДОБАВИТЬ фильтер чейн на сервисный токен)
 
     @Bean
     public SecurityFilterChain securityFilterChain(
