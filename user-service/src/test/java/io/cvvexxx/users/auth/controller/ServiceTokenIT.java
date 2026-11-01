@@ -50,7 +50,7 @@ class ServiceTokenIT {
     }
 
     private String request(String clientId, String clientSecret, ResultMatcher expected) throws Exception {
-        return mockMvc.perform(post("/api/auth/service-token")
+        return mockMvc.perform(post("/internal/auth/service-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 java.util.Map.of("clientId", clientId, "clientSecret", clientSecret))))

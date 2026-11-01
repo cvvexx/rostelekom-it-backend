@@ -20,7 +20,7 @@ public class InternalAuthController {
     private final AuthService authService;
 
     //Выпуск access-токена для межсервисных запросов (client credentials), refresh-токена нет - по истечении просят новый
-    @PostMapping("/service-token") //POST /api/auth/service-token
+    @PostMapping("/service-token") //POST /internal/auth/service-token
     public ResponseEntity<ServiceTokenResponseDto> getServiceToken(
             @Valid @RequestBody ServiceTokenRequestDto requestDto
     ) {
