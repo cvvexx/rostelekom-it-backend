@@ -55,6 +55,15 @@ public class Subscription {
     @Column(name = "canceled_at")
     private Instant canceledAt;
 
+    //Пока не истёк, джоба списаний подписку не берёт: другой инстанс уже списывает или ждём после отказа billing
+    @Column(name = "charge_locked_until")
+    private Instant chargeLockedUntil;
+
+    //Id CHARGE-транзакции в billing за последний оплаченный период
+    //При создании null до первого списания
+    @Column(name = "last_charge_transaction_id")
+    private UUID lastChargeTransactionId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private Instant createdAt;
