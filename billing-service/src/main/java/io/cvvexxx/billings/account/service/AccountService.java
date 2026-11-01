@@ -75,6 +75,7 @@ public class AccountService {
             throw new AccountStatusConflictException("account.status-already-set", dbAccountStatus, account.getId());
         }
 
+        //TODO(решить как закрывать аккаунт когда есть активные подписки)
         if (accountStatus == AccountStatus.CLOSED
                 && paymentRepository.existsByStatusAndAccountId(PaymentStatus.PENDING, account.getId())) {
             throw new AccountHasPendingPaymentsException("account.has-pending-payments", account.getId());
