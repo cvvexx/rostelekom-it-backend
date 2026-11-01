@@ -1,8 +1,6 @@
 package io.cvvexxx.users.auth.controller;
 
-import io.cvvexxx.users.auth.dto.OtpRequestDto;
-import io.cvvexxx.users.auth.dto.OtpVerifyDto;
-import io.cvvexxx.users.auth.dto.RefreshTokenDto;
+import io.cvvexxx.users.auth.dto.*;
 import io.cvvexxx.users.auth.service.AuthService;
 import io.cvvexxx.users.otp.dto.OtpChallengeDto;
 import io.cvvexxx.users.token.dto.TokenPairDto;
@@ -10,7 +8,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.core.ApplicationContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,4 +49,5 @@ public class AuthController {
         authService.logout(dto.refreshToken());
         return ResponseEntity.noContent().build();
     }
+
 }

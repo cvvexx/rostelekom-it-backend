@@ -49,6 +49,10 @@ public class Transaction {
     @JoinColumn(name = "payment_id", updatable = false)
     private Payment payment;
 
+    //Ключ от вызывающего сервиса, чтобы повторный запрос не списал деньги второй раз (только у CHARGE)
+    @Column(name = "idempotency_key", length = 64, updatable = false)
+    private String idempotencyKey;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private Instant createdAt;

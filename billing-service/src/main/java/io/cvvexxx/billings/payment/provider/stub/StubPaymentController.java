@@ -24,6 +24,7 @@ public class StubPaymentController {
     private final PaymentService paymentService;
 
     //Эндпоинт имитации подтверждения оплаты, вызывает фронт
+    //То что любой может пополнить свой или чужой счет это толкьо для dev, фиксить впадлу если честно
     @PostMapping("/{providerPaymentId}")
     public ResponseEntity<PaymentDto> pay(@PathVariable("providerPaymentId") String providerPaymentId) {
         stubPaymentProvider.markPaid(providerPaymentId);//имитация оплаты

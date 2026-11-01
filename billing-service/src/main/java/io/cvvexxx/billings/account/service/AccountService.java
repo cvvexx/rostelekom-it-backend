@@ -6,9 +6,12 @@ import io.cvvexxx.billings.account.dto.OpenAccountResult;
 import io.cvvexxx.billings.account.entity.Account;
 import io.cvvexxx.billings.account.entity.AccountStatus;
 import io.cvvexxx.billings.account.exception.AccountClosedException;
+import io.cvvexxx.billings.account.exception.AccountHasPendingPaymentsException;
 import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.account.repository.AccountRepository;
+import io.cvvexxx.billings.payment.entity.PaymentStatus;
+import io.cvvexxx.billings.payment.repository.PaymentRepository;
 import io.cvvexxx.billings.transaction.dto.TransactionDto;
 import io.cvvexxx.billings.transaction.entity.Transaction;
 import io.cvvexxx.billings.transaction.repository.TransactionRepository;
@@ -28,6 +31,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final PaymentRepository paymentRepository;
 
     //Создаём счёт, если его ещё нет, и запоминаем, создали ли новый
     @Transactional
@@ -37,16 +41,16 @@ public class AccountService {
         return new OpenAccountResult(toDto(findAccount(userId)), created);
     }
 
-    //Счёт открывается при первом запросе, чтобы фронту не нужно было отдельно вызывать POST
-    @Transactional
+    //Счёта нет — 404, фронт сам решает, открывать ли его через POST
+    @Transactional(readOnly = true)
     public AccountDto getMyAccount(UUID userId) {
-        return openAccount(userId).account();
+        return toDto(findAccount(userId));
     }
 
     @Transactional(readOnly = true)
     public Page<TransactionDto> getMyTransactions(UUID userId, Pageable pageable) {
         Page<Transaction> transactions = transactionRepository
-                .findByAccountIdOrderByCreatedAtDesc(findAccount(userId).getId(), pageable);
+                .findByAccountId(findAccount(userId).getId(), pageable);
 
         return transactions.map(this::toDto);
     }
@@ -69,6 +73,12 @@ public class AccountService {
 
         if (dbAccountStatus == accountStatus) {
             throw new AccountStatusConflictException("account.status-already-set", dbAccountStatus, account.getId());
+        }
+
+        //TODO(решить как закрывать аккаунт когда есть активные подписки)
+        if (accountStatus == AccountStatus.CLOSED
+                && paymentRepository.existsByStatusAndAccountId(PaymentStatus.PENDING, account.getId())) {
+            throw new AccountHasPendingPaymentsException("account.has-pending-payments", account.getId());
         }
 
         account.setStatus(accountStatus);//save не нужен, Hibernate сам сохранит изменения при коммите

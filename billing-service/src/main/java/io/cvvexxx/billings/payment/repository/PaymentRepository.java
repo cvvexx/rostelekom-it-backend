@@ -3,6 +3,7 @@ package io.cvvexxx.billings.payment.repository;
 import io.cvvexxx.billings.payment.entity.Payment;
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -39,8 +40,22 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     @Query("select p from Payment p where p.provider = :provider and p.providerPaymentId = :providerPaymentId")
     Optional<Payment> findByProviderPaymentIdForUpdate(String provider, String providerPaymentId);
 
-    //Для того чтобы обрабатывать зависшие платежи
-    List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, Instant before);
+    //Зависшие платежи для PendingPaymentsCancellingJob: пачка после after, созданные раньше before, старые первыми
+    @Query("""
+            select p.id as id, p.createdAt as createdAt from Payment p
+            where p.status = :status and p.createdAt > :after and p.createdAt < :before
+            order by p.createdAt
+            """)
+    List<StalePayment> findStale(PaymentStatus status, Instant after, Instant before, Limit limit);
+
+    interface StalePayment {
+        UUID getId();
+
+        Instant getCreatedAt();
+    }
+
+    //Есть ли у счёта платежи в статусе status, например неоплаченные перед закрытием счёта
+    boolean existsByStatusAndAccountId(PaymentStatus status, UUID accountId);
 
     //Как в AccountRepository: два запроса с одним idempotencyKey не упадут на unique,
     //второй просто ничего не вставит, после чего платёж перечитывается через findByAccountIdAndIdempotencyKey
@@ -52,5 +67,5 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             """, nativeQuery = true)
     int insertIfAbsent(UUID accountId, BigDecimal amount, String currency, String provider, String idempotencyKey);
 
-    Page<Payment> findByAccountIdOrderByCreatedAtDesc(UUID accountId, Pageable pageable);
+    Page<Payment> findByAccountId(UUID accountId, Pageable pageable);
 }

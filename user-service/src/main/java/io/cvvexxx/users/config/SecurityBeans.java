@@ -35,6 +35,8 @@ public class SecurityBeans {
                         request -> request
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json").permitAll()
+                                //Выдача сервисного токена: сервис ещё без токена, проверка по clientId/clientSecret внутри
+                                .requestMatchers(HttpMethod.POST, "/internal/auth/service-token").permitAll()
                                 //Swagger UI и OpenAPI-спека
                                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                                 //Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован

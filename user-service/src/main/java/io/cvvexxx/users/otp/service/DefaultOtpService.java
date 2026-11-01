@@ -58,7 +58,7 @@ public class DefaultOtpService implements OtpService {
 
         log.info("OTP issued for phone {}", PhoneNumbersUtils.mask(normalizedPhone));
 
-        //(Временно) возвращаем телефон + код, (НА ПРОДЕ СДЕЛАТЬ 204?)
+        //TODO(Временно) возвращаем телефон + код,
         return new OtpChallengeDto(
                 normalizedPhone,
                 //Задел под будущую отправку сообщений, если в .properties файле указано, что код возвращать не надо
@@ -66,7 +66,8 @@ public class DefaultOtpService implements OtpService {
                 //к проду переделаю
                 properties.exposeCode() ? code : null,
                 properties.ttl().toSeconds(),
-                properties.resendCooldown().toSeconds()
+                properties.resendCooldown().toSeconds(),
+                null
         );
     }
 

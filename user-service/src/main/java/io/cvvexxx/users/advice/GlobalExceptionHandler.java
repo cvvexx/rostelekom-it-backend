@@ -1,10 +1,10 @@
 package io.cvvexxx.users.advice;
 
+import io.cvvexxx.users.auth.exception.FullNameRequiredException;
 import io.cvvexxx.users.otp.exception.InvalidOtpException;
 import io.cvvexxx.users.otp.exception.OtpRequestNotAllowedException;
 import io.cvvexxx.users.phone.InvalidPhoneNumberException;
 import io.cvvexxx.users.token.exception.InvalidRefreshTokenException;
-import io.cvvexxx.users.user.exception.FieldAlreadyExistsException;
 import io.cvvexxx.users.user.exception.UserNotFoundException;
 import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
@@ -47,18 +47,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return message(e.getMessage(), e.getArgs());
     }
 
-    //Ошибка создания юзера, нарушение уникальности username, номера и т.п. уникальных полей
     //@ExceptionHandler(X.class) - аналог @app.exception_handler(X): если X вылетел в любом контроллере/сервисе,
     //Spring вызовет этот метод, а то что он вернет уйдет клиенту
-    @ExceptionHandler(FieldAlreadyExistsException.class)
-    public ProblemDetail handleFieldAlreadyExists(FieldAlreadyExistsException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message(e));
-    }
 
     //Не удалось распарсить телефон(пришли буквы, телефон не соответствует стране)
     //По идее должно обрабатываться на фронте, но на всякий случай сделал
     @ExceptionHandler(InvalidPhoneNumberException.class)
     public ProblemDetail handleInvalidPhoneNumber(InvalidPhoneNumberException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
+    }
+
+    //Новый номер входит без фамилии/имени (DefaultAuthService.verifyOtp)
+    @ExceptionHandler(FullNameRequiredException.class)
+    public ProblemDetail handleFullNameRequired(FullNameRequiredException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
     }
 

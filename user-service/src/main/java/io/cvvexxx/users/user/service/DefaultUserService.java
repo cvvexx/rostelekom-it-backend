@@ -1,20 +1,16 @@
 package io.cvvexxx.users.user.service;
 
-import io.cvvexxx.users.user.dto.UpdateProfileDto;
 import io.cvvexxx.users.user.dto.UserProfileDto;
 import io.cvvexxx.users.user.entity.Role;
 import io.cvvexxx.users.user.entity.User;
-import io.cvvexxx.users.user.exception.FieldAlreadyExistsException;
 import io.cvvexxx.users.user.exception.UserNotFoundException;
 import io.cvvexxx.users.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Locale;
 import java.util.UUID;
 
 @Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
@@ -27,45 +23,23 @@ public class DefaultUserService implements UserService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean existsByPhone(String phone) {
+        return userRepository.existsByPhone(phone);
+    }
+
+    //ФИО используется только при создании, у существующего юзера не перезаписывается
+    @Override
     @Transactional //Весь метод в одной транзакции (как async with session.begin()), при RuntimeException будет rollback
-    public User findOrCreateByPhone(String phone) {
+    public User findOrCreateByPhone(String phone, String lastName, String firstName, String middleName) {
         return userRepository.findByPhone(phone)//Ищем юзера в бд, если находим, то возвращаем
-                .orElseGet(() -> createUser(phone));//Иначе создаем его
+                .orElseGet(() -> createUser(phone, lastName, firstName, middleName));//Иначе создаем его
     }
 
     @Override
     @Transactional(readOnly = true) //Транзакция только на чтение, Hibernate не отслеживает изменения - чуть быстрее
     public UserProfileDto getProfile(UUID userId) {
         return toDto(requireUser(userId));//мапим в дто полученного из бд юзера
-    }
-
-    //Метод обновления профиля юзера
-    @Override
-    @Transactional
-    public UserProfileDto updateProfile(UUID userId, UpdateProfileDto dto) {
-        User user = requireUser(userId);
-
-        if (dto.username() != null) {
-            String username = dto.username().trim().toLowerCase(Locale.ROOT);//Приводим username к нормальному виду
-            if (!username.equals(user.getUsername()) && userRepository.existsByUsername(username)) {
-                throw new FieldAlreadyExistsException("username", username,
-                        "user.username-exists", username);
-            }
-            user.setUsername(username);
-        }
-        if (dto.firstName() != null) {
-            user.setFirstName(dto.firstName().trim());
-        }
-        if (dto.lastName() != null) {
-            user.setLastName(dto.lastName().trim());
-        }
-
-        try {
-            return toDto(userRepository.saveAndFlush(user));
-        } catch (DataIntegrityViolationException e) {
-            throw new FieldAlreadyExistsException("username", user.getUsername(),
-                    "user.username-exists", user.getUsername());
-        }
     }
 
     @Override
@@ -78,11 +52,12 @@ public class DefaultUserService implements UserService {
         }
     }
 
-    private User createUser(String phone) {
+    private User createUser(String phone, String lastName, String firstName, String middleName) {
         //Если два потока одновременно захотят создать юзера, то это здесь обрабатывается
         UUID id = UUID.randomUUID();
         //Атомарная операция, возвращает 1, если юзера создает, и 0, если конфликт и такой юзер уже есть
-        if (userRepository.insertIfAbsent(id, phone, Instant.now()) == 1) {
+        if (userRepository.insertIfAbsent(id, phone, trimToNull(lastName), trimToNull(firstName),
+                trimToNull(middleName), Instant.now()) == 1) {
             userRepository.insertRole(id, Role.USER.name());//Если юзер создан, то привязываем ему роль
             log.info("Created user {} on first successful OTP verification", id);
         } else {
@@ -91,6 +66,10 @@ public class DefaultUserService implements UserService {
         //В любой случае читаем и возвращаем юзера
         return userRepository.findByPhone(phone)
                 .orElseThrow(() -> new IllegalStateException("User with phone was not created"));
+    }
+
+    private static String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     //Ищем юзера по id, иначе выбрасываем exception
@@ -103,9 +82,9 @@ public class DefaultUserService implements UserService {
         return new UserProfileDto(
                 user.getId(),
                 user.getPhone(),
-                user.getUsername(),
                 user.getFirstName(),
-                user.getLastName()
+                user.getLastName(),
+                user.getMiddleName()
         );
     }
 }

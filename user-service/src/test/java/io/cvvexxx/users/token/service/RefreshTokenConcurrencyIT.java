@@ -56,7 +56,7 @@ class RefreshTokenConcurrencyIT {
     @Test
     @DisplayName("Параллельный refresh одним токеном: новую пару получает ровно один поток")
     void parallelRefreshWithSameToken_onlyOneSucceeds() throws Exception {
-        User user = userService.findOrCreateByPhone("+79990000001");
+        User user = userService.findOrCreateByPhone("+79990000001", "Иванов", "Иван", null);
         String refreshToken = tokenService.issueTokens(user).refreshToken();
 
         int threads = 8;
@@ -91,7 +91,7 @@ class RefreshTokenConcurrencyIT {
     @Test
     @DisplayName("Повторное использование отозванного токена гасит все сессии пользователя")
     void reusingRevokedToken_revokesEverySession() {
-        User user = userService.findOrCreateByPhone("+79990000002");
+        User user = userService.findOrCreateByPhone("+79990000002", "Иванов", "Иван", null);
         String first = tokenService.issueTokens(user).refreshToken();
         String second = tokenService.refresh(first).refreshToken();
 

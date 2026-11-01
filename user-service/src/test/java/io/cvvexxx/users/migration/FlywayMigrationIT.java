@@ -56,7 +56,7 @@ class FlywayMigrationIT {
         Integer applied = jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where success = true", Integer.class);
 
-        assertThat(applied).isEqualTo(6);
+        assertThat(applied).isEqualTo(8);
     }
 
     @ParameterizedTest

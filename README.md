@@ -58,32 +58,33 @@ Swagger открывается напрямую на сервисе, а не ч�
 
 | Запрос | Тело | Ответ |
 |---|---|---|
-| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds }` — `code` приходит только в dev |
-| `POST /api/auth/otp/verify` | `{ "phone", "code" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
+| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds, registered }` — `code` приходит только в dev |
+| `POST /api/auth/otp/verify` | `{ "phone", "code", "lastName", "firstName", "middleName" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
 | `POST /api/auth/refresh` | `{ "refreshToken" }` | новая пара токенов |
 | `POST /api/auth/logout` | `{ "refreshToken" }` | `204` |
 
 - Access-токен живёт 15 минут, refresh — 30 дней.
 - **Refresh одноразовый.** После `/refresh` сохраняй новую пару и выбрасывай старую. Повторное использование старого refresh завершает **все** сессии юзера. Если фронт открыт в нескольких вкладках, refresh должен делать кто-то один, иначе юзера будет выкидывать.
+- **Регистрация.** Если `/otp/request` вернул `registered: false`, номер новый: покажи поля ФИО рядом с полем кода. Для нового номера `lastName` и `firstName` обязательны (до 100 символов), `middleName` — по желанию. Без них `/otp/verify` вернёт `400`, код при этом не сгорает. Для зарегистрированного номера ФИО не нужно и игнорируется.
 - Повторно запросить код можно через `resendAfterSeconds`. При частых запросах придёт `429` с заголовком `Retry-After`.
 
 ### Профиль
 
 | Запрос | Тело | Ответ |
 |---|---|---|
-| `GET /api/users/me` | — | `{ id, phone, username, firstName, lastName }` |
-| `PATCH /api/users/me` | любые из `username` (3–20 символов), `firstName`, `lastName` (до 100) | обновлённый профиль |
+| `GET /api/users/me` | — | `{ id, phone, lastName, firstName, middleName }` |
 
-Телефон через профиль поменять нельзя.
+Профиль только для чтения: ФИО задаётся при регистрации.
 
 ### Счёт и баланс
 
 | Запрос | Ответ |
 |---|---|
 | `GET /api/billing/accounts/me` | `{ id, number, balance, currency, status }` |
+| `POST /api/billing/accounts` | открыть счёт: `201` если создан, `200` если уже был, тело как у `GET /me` |
 | `GET /api/billing/accounts/me/transactions?page=0&size=20` | страница операций, новые сверху |
 
-- Счёт открывается автоматически при первом `GET /accounts/me`. Открой личный кабинет с этого запроса, пока счёта нет, платежи и история отвечают `404`.
+- Пока счёта нет, `GET /me`, платежи и история отвечают `404`. Предложи юзеру открыть счёт и вызови `POST /accounts`.
 - `status`: `ACTIVE`, `BLOCKED` (ушёл в минус или заблокирован — пополнять можно), `CLOSED`.
 
 ### Пополнение баланса
@@ -107,7 +108,7 @@ Swagger открывается напрямую на сервисе, а не ч�
 { "status": 400, "title": "Bad Request", "detail": "Ошибка валидации", "errors": { "amount": "Сумма платежа должна быть больше нуля" } }
 ```
 
-`detail` — готовый текст на русском, его можно показывать юзеру. `errors` есть только у ошибок валидации (ключ — поле запроса). Если сервис за gateway лежит, придёт `503`.
+`detail` — готовый текст на русском, его можно показывать юзеру. `errors` есть только у ошибок валидации (ключ — поле запроса). Если сервис за gateway лежит, придёт `503`. Если запросов больше 100 в минуту (на юзера, а без токена на IP), gateway ответит `429` с заголовком `Retry-After`.
 
 ## Структура папок
 

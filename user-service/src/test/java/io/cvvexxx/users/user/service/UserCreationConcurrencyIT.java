@@ -62,7 +62,7 @@ class UserCreationConcurrencyIT {
             List<? extends Future<UUID>> futures = IntStream.range(0, threads)
                     .mapToObj(i -> pool.submit(() -> {
                         start.await();
-                        return userService.findOrCreateByPhone(phone).getId();
+                        return userService.findOrCreateByPhone(phone, "Иванов", "Иван", null).getId();
                     }))
                     .toList();
 
