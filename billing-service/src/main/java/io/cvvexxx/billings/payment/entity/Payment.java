@@ -64,8 +64,4 @@ public class Payment {
     @UpdateTimestamp
     private Instant updatedAt;
 
-    //Платёж уже оплачен или отменён
-    public boolean isFinal() {
-        return status != PaymentStatus.PENDING;
-    }
 }

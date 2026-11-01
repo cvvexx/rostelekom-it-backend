@@ -11,6 +11,6 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
-    Page<Transaction> findByAccountIdOrderByCreatedAtDesc(UUID accountId, Pageable pageable);
+    Page<Transaction> findByAccountId(UUID accountId, Pageable pageable);
 
 }

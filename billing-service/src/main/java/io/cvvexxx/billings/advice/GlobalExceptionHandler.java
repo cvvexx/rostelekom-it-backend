@@ -1,6 +1,7 @@
 package io.cvvexxx.billings.advice;
 
 import io.cvvexxx.billings.account.exception.AccountClosedException;
+import io.cvvexxx.billings.account.exception.AccountHasPendingPaymentsException;
 import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.exception.AccountStatusConflictException;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
@@ -53,8 +54,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, message(e));
     }
 
-    //Операция со счётом недопустима в его текущем статусе (закрыт, статус уже стоит)
-    @ExceptionHandler({AccountClosedException.class, AccountStatusConflictException.class, PaymentStatusConflictException.class})
+    //Операция со счётом недопустима в его текущем статусе (закрыт, статус уже стоит, есть неоплаченные платежи)
+    @ExceptionHandler({AccountClosedException.class, AccountStatusConflictException.class, PaymentStatusConflictException.class,
+            AccountHasPendingPaymentsException.class})
     public ProblemDetail handleConflict(LocalizedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message(e));
     }
@@ -63,6 +65,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IdempotencyKeyReusedException.class)
     public ProblemDetail handleIdempotencyKeyReused(IdempotencyKeyReusedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, message(e));
+    }
+
+    //Клиент прислал sort по полю, которого нет в списке разрешённых (sort=foo, sort=["string"] из Swagger)
+    @ExceptionHandler(InvalidSortException.class)
+    public ProblemDetail handleInvalidSort(InvalidSortException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
     }
 
     //HTTP 401(токен не валиден, истек или его вообще нет), вызывается из ProblemDetailAuthenticationEntryPoint

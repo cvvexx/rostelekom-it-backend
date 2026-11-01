@@ -17,10 +17,10 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     //Spring Data сам генерит запрос по имени метода: findByPhone -> select ... where phone = ?,
-    //existsByUsername -> проверка есть ли запись с таким username
+    //existsByPhone -> проверка есть ли запись с таким телефоном
     Optional<User> findByPhone(String phone);
 
-    boolean existsByUsername(String username);
+    boolean existsByPhone(String phone);
 
     // Атомарное "создать, если нет": при гонке двух потоков с одним телефоном второй INSERT дождётся
     // коммита первого и просто ничего не вставит (вернёт 0) вместо ошибки unique-констрейнта.
@@ -29,11 +29,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     //@Param("id") - подставляет аргумент метода вместо :id в запросе
     @Modifying
     @Query(value = """
-            insert into users (id, phone, created_at, updated_at)
-            values (:id, :phone, :now, :now)
+            insert into users (id, phone, last_name, first_name, middle_name, created_at, updated_at)
+            values (:id, :phone, :lastName, :firstName, :middleName, :now, :now)
             on conflict do nothing
             """, nativeQuery = true)
-    int insertIfAbsent(@Param("id") UUID id, @Param("phone") String phone, @Param("now") Instant now);
+    int insertIfAbsent(@Param("id") UUID id, @Param("phone") String phone,
+                       @Param("lastName") String lastName, @Param("firstName") String firstName,
+                       @Param("middleName") String middleName, @Param("now") Instant now);
 
     @Modifying
     @Query(value = "insert into user_roles (user_id, role) values (:userId, :role)", nativeQuery = true)

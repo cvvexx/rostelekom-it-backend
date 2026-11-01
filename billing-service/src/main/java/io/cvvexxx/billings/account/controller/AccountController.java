@@ -7,8 +7,11 @@ import io.cvvexxx.billings.account.dto.OpenAccountResult;
 import io.cvvexxx.billings.account.service.AccountService;
 import io.cvvexxx.billings.transaction.dto.TransactionDto;
 import jakarta.validation.Valid;
+import io.cvvexxx.billings.advice.InvalidSortException;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
@@ -18,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 //Контроллер лицевых счетов
@@ -25,6 +29,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/billing/accounts")
 public class AccountController {
+
+    //Поля, по которым фронт может сортировать историю операций
+    private static final Set<String> SORT_FIELDS = Set.of("createdAt", "amount", "type");
 
     private final AccountService accountService;
 
@@ -46,8 +53,9 @@ public class AccountController {
     @GetMapping("/me/transactions")
     public ResponseEntity<PagedModel<TransactionDto>> getMyTransactions(
             @AuthenticationPrincipal Jwt jwt,
-            @PageableDefault(size = 20) Pageable pageable
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        InvalidSortException.requireAllowed(pageable, SORT_FIELDS);
         return ResponseEntity.ok(new PagedModel<>(accountService.getMyTransactions(currentUserId(jwt), pageable)));
     }
 
