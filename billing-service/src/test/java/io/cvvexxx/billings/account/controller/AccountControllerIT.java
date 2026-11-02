@@ -150,6 +150,14 @@ class AccountControllerIT {
     }
 
     @Test
+    @DisplayName("Сервисный токен на пользовательский эндпоинт — 403, а не 500 на UUID.fromString(sub)")
+    void serviceToken_onUserEndpoint_returns403() throws Exception {
+        mockMvc.perform(get(ACCOUNTS + "/me").with(jwt().jwt(jwt -> jwt.subject("service:services-service"))
+                        .authorities(new SimpleGrantedAuthority("ROLE_SERVICE"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("GET /me: счёта нет — 404, счёт не создаётся")
     void getMyAccount_withoutAccount_returns404() throws Exception {
         UUID userId = UUID.randomUUID();
@@ -262,7 +270,8 @@ class AccountControllerIT {
     }
 
     private RequestPostProcessor user(UUID userId) {
-        return jwt().jwt(jwt -> jwt.subject(userId.toString()));
+        return jwt().jwt(jwt -> jwt.subject(userId.toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     private RequestPostProcessor admin() {

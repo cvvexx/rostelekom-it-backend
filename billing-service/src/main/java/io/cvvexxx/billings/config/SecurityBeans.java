@@ -4,6 +4,7 @@ package io.cvvexxx.billings.config;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,10 +23,38 @@ import java.util.stream.Collectors;
 @Configuration
 public class SecurityBeans {
 
-    //TODO(ДОБАВИТЬ фильтер чейн на сервисный токен)
-
+    //Межсервисные эндпоинты
+    @Order(1)
     @Bean
-    public SecurityFilterChain securityFilterChain(
+    public SecurityFilterChain internalSecurityFilterChain(
+            HttpSecurity httpSecurity,
+            AuthenticationEntryPoint authenticationEntryPoint,
+            AccessDeniedHandler accessDeniedHandler
+    ) {
+        return httpSecurity
+                .securityMatcher("/internal/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(request ->
+                        request.anyRequest().hasRole("SERVICE"))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2
+                                .jwt(jwtConfigurer ->
+                                        jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .accessDeniedHandler(accessDeniedHandler)
+                )
+                .exceptionHandling(exceptions ->
+                        exceptions.authenticationEntryPoint(authenticationEntryPoint))
+                .build();
+    }
+
+
+    //Пользовательские эндпоинты
+    @Order(2)
+    @Bean
+    public SecurityFilterChain userSecurityFilterChain(
             HttpSecurity httpSecurity,
             AuthenticationEntryPoint authenticationEntryPoint,
             AccessDeniedHandler accessDeniedHandler
@@ -34,7 +63,7 @@ public class SecurityBeans {
                 .csrf(AbstractHttpConfigurer::disable)//CSRF не нужен: cookie-сессий нет, токен приходит в заголовке
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().hasAnyRole("USER", "ADMIN")
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))//Сессии не храним, каждый запрос проверяется по токену
