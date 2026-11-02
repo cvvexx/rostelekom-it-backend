@@ -28,9 +28,16 @@ public class SubscriptionChargingJob {
     @Value("${app.subscription.lease-ttl:2000}")
     private long leaseTtl;
 
-    //Через сколько повторить списание после отказа billing
-    @Value("${app.subscription.charge-retry-delay:PT1H}")
-    private Duration retryDelay;
+    //Интервал ретраев после отказа billing растёт вместе с просрочкой: от min до max
+    @Value("${app.subscription.charge-retry-min-delay:PT1H}")
+    private Duration minRetryDelay;
+
+    @Value("${app.subscription.charge-retry-max-delay:PT24H}")
+    private Duration maxRetryDelay;
+
+    //Сколько приостановленная подписка ждёт оплату, потом отменяем её и больше не ходим в billing
+    @Value("${app.subscription.grace-period:P30D}")
+    private Duration gracePeriod;
 
     private final BillingServiceRestClient restClient;
     private final SubscriptionRepository subscriptionRepository;
@@ -65,6 +72,16 @@ public class SubscriptionChargingJob {
             return;
         }
 
+        //Проверка сколько уже не оплачена подписка(now - nextChargeAt), если больше gracePeriod то отменяем
+        //Чтобы не ходить в billing service и не нагружать его просто так
+        //TODO(В будущем добавить эндпоинт/кафку чтобы при пополнении баланса сервис услуг пытался списать деньги)
+        Duration overdue = Duration.between(claimedNextChargeAt, now);
+        if (subscription.getStatus() == SubscriptionStatus.SUSPENDED && overdue.compareTo(gracePeriod) > 0) {
+            log.info("Подписка {} не оплачена дольше {}, отменяем", id, gracePeriod);
+            subscriptionChargeService.markCanceled(id, claimedNextChargeAt, now);
+            return;
+        }
+
         ChargeOutcome outcome = restClient.createCharge(new CreateChargeDto(
                 subscription.getUserId(),
                 subscription.getPrice(),
@@ -72,28 +89,34 @@ public class SubscriptionChargingJob {
                 "Оплата тарифа " + subscription.getTariffName()
         ));
 
-        boolean applied = switch (outcome) {
+        switch (outcome) {
             case ChargeOutcome.Charged charged -> {
                 //Приостановленную подписку оплатили только сейчас: новый период считаем от оплаты, а не от пропущенной даты
                 Instant periodStart = subscription.getStatus() == SubscriptionStatus.SUSPENDED ? now : claimedNextChargeAt;
                 //TODO(исправить если появятся подписки у которых оплата не раз в месяц)
                 Instant nextChargeAt = periodStart.atOffset(ZoneOffset.UTC).plusMonths(1).toInstant();
-                yield subscriptionChargeService.markCharged(id, claimedNextChargeAt, periodStart, nextChargeAt,
-                        charged.transactionId());
+                if (
+                        !subscriptionChargeService.markCharged(id, claimedNextChargeAt, periodStart, nextChargeAt,
+                                charged.transactionId())
+                ) {
+                    //подписку могли отменить пока мы пытались списать деньги, по факту пользователь
+                    //заплатил за период отмененной подписки
+                    //TODO(сделать возврат через billing, когда появится refund для charge)
+                    log.warn("Списали {} по подписке {}, но результат не применён: подписку отменили или уже продлили. Транзакция {}",
+                            subscription.getPrice(), id, charged.transactionId());
+                }
             }
             //Не хватило денег, аккаунт не найден/заблокирован
             case ChargeOutcome.Declined declined -> {
                 log.info("billing отказал в списании по подписке {}: {}", id, declined.code());
-                //останавливаем обслуживание подписки
-                yield subscriptionChargeService.markSuspended(id, claimedNextChargeAt, now.plus(retryDelay));
+                //Растущий delay чтобы часто не нагружать billing service
+                Duration retryDelay = Duration.ofSeconds(
+                        Math.clamp(overdue.toSeconds(), minRetryDelay.toSeconds(), maxRetryDelay.toSeconds()));
+                subscriptionChargeService.markSuspended(id, claimedNextChargeAt, now.plus(retryDelay));
             }
             //Аккаунт закрыт -> отменяем подписку
             case ChargeOutcome.AccountClosed ignored ->
                     subscriptionChargeService.markCanceled(id, claimedNextChargeAt, now);
-        };
-
-        if (!applied) {
-            log.debug("Подписку {} уже обработали или отменили, результат списания не применён", id);
         }
     }
 
