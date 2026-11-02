@@ -140,11 +140,12 @@ class SubscriptionChargingJobIT {
 
         runJob();
 
-        //retryAt = now + (now - due), окно [before, after] даёт до-/после-границы
+        //retryAt = now + (now - due) с отброшенными долями секунды (джоба считает задержку в целых секундах),
+        //окно [before, after] даёт нижнюю и верхнюю границы
         Instant lockedUntil = instant(row(id), "charge_locked_until");
         assertThat(lockedUntil).isBetween(
-                before.plus(Duration.between(due, before)).minus(TOLERANCE),
-                after.plus(Duration.between(due, after)).plus(TOLERANCE));
+                before.plusSeconds(Duration.between(due, before).toSeconds()).minus(TOLERANCE),
+                after.plusSeconds(Duration.between(due, after).toSeconds()).plus(TOLERANCE));
     }
 
     @Test

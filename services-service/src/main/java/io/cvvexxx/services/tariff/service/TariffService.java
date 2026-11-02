@@ -107,4 +107,9 @@ public class TariffService {
                 tariff.getCreatedAt()
         );
     }
+
+    private class TariffNotFoundException extends RuntimeException {
+        public TariffNotFoundException(String string, UUID id) {
+        }
+    }
 }
