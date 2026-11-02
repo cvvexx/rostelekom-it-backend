@@ -2,7 +2,7 @@ package io.cvvexxx.services.client;
 
 import java.util.UUID;
 
-public interface ChargeOutcome {
+public sealed interface ChargeOutcome {
 
     record Charged(UUID transactionId) implements ChargeOutcome {
     }
