@@ -16,11 +16,8 @@ import java.util.UUID;
 @Repository // Аналогично @Service и @RestController создает бин
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    //Spring Data сам генерит запрос по имени метода: findByPhone -> select ... where phone = ?,
-    //existsByPhone -> проверка есть ли запись с таким телефоном
+    //Spring Data сам генерит запрос по имени метода: findByPhone -> select ... where phone = ?
     Optional<User> findByPhone(String phone);
-
-    boolean existsByPhone(String phone);
 
     // Атомарное "создать, если нет": при гонке двух потоков с одним телефоном второй INSERT дождётся
     // коммита первого и просто ничего не вставит (вернёт 0) вместо ошибки unique-констрейнта.

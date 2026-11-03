@@ -2,7 +2,7 @@ package io.cvvexxx.users.token.service;
 
 import io.cvvexxx.users.auth.dto.ServiceTokenResponseDto;
 import io.cvvexxx.users.token.config.JwtProperties;
-import io.cvvexxx.users.token.dto.TokenPairDto;
+import io.cvvexxx.users.auth.dto.TokenPairDto;
 import io.cvvexxx.users.token.entity.RefreshToken;
 import io.cvvexxx.users.token.exception.InvalidRefreshTokenException;
 import io.cvvexxx.users.token.repository.RefreshTokenRepository;

@@ -1,6 +1,7 @@
 package io.cvvexxx.users.otp.store;
 
 import java.time.Duration;
+import java.util.Optional;
 
 public interface OtpStore {
 
@@ -17,4 +18,8 @@ public interface OtpStore {
     long incrementSendsInWindow(String phone, Duration window);
 
     Duration sendsWindowTimeToLive(String phone);
+
+    void saveRegistration(String phone, String token, Duration ttl);
+
+    Optional<String> consumeRegistration(String registrationToken);
 }

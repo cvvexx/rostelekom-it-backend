@@ -1,5 +1,6 @@
 package io.cvvexxx.users.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cvvexxx.users.otp.store.InMemoryOtpStore;
 import io.cvvexxx.users.otp.store.OtpStore;
@@ -163,11 +164,27 @@ class SecurityErrorFormatIT {
                 .andReturn().getResponse().getContentAsString();
         String code = new ObjectMapper().readTree(challenge).get("code").asText();
 
-        String tokens = mockMvc.perform(post("/api/auth/otp/verify")
+        String verify = mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван"}
+                                {"phone": "%s", "code": "%s"}
                                 """.formatted(PHONE, code)))
+                .andReturn().getResponse().getContentAsString();
+        JsonNode verified = new ObjectMapper().readTree(verify);
+
+        //Юзер уже есть (зарегистрировался в прошлом тесте) -> токены пришли сразу
+        if (verified.has("accessToken")) {
+            return verified.get("accessToken").asText();
+        }
+
+        //Номер новый -> verify отдаёт токен регистрации, с ним регистрируемся и получаем access-токен
+        String registrationToken = verified.get("registrationToken").asText();
+
+        String tokens = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"registrationToken": "%s", "lastName": "Иванов", "firstName": "Иван"}
+                                """.formatted(registrationToken)))
                 .andReturn().getResponse().getContentAsString();
 
         return new ObjectMapper().readTree(tokens).get("accessToken").asText();

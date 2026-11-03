@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Base64;
+import java.util.Optional;
 
 @Service //Бин, Spring создаст один объект и подставит его в DefaultAuthService
 @RequiredArgsConstructor //Через конструктор приходят OtpStore, SmsSender, OtpProperties (те, что из OtpBeans)
@@ -66,8 +68,7 @@ public class DefaultOtpService implements OtpService {
                 //к проду переделаю
                 properties.exposeCode() ? code : null,
                 properties.ttl().toSeconds(),
-                properties.resendCooldown().toSeconds(),
-                null
+                properties.resendCooldown().toSeconds()
         );
     }
 
@@ -88,6 +89,28 @@ public class DefaultOtpService implements OtpService {
                     InvalidOtpException.Reason.ATTEMPTS_EXCEEDED, 0,
                     "otp.attempts-exceeded");
         }
+    }
+
+    //Выдаем токен регистрации для номера, который уже подтвердил код, но юзера с ним еще нет
+    //Токен случайный (32 байта), а не просто номер телефона, иначе кто угодно смог бы зарегистрировать чужой номер
+    @Override
+    public String issueRegistrationToken(String normalizedPhone) {
+        byte[] bytes = new byte[32];
+        secureRandom.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        otpStore.saveRegistration(normalizedPhone, token, properties.registrationTtl());//Кладем в редис с TTL
+        return token;
+    }
+
+    //Достаем номер по токену и сразу удаляем токен, пустой Optional -> токена нет или истек
+    @Override
+    public Optional<String> consumeRegistrationToken(String token) {
+        return otpStore.consumeRegistration(token);
+    }
+
+    @Override
+    public Duration registrationTtl() {
+        return properties.registrationTtl();
     }
 
     //Метод для генерации кода размером, который указан в .properties

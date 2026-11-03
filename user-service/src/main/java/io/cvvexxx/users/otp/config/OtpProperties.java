@@ -22,7 +22,9 @@ public record OtpProperties(
 
         boolean exposeCode,
 
-        String store
+        String store,
+
+        Duration registrationTtl
 ) {
     public OtpProperties {
         if (length <= 0) {
@@ -45,6 +47,9 @@ public record OtpProperties(
         }
         if (store == null || store.isBlank()) {
             store = "redis";
+        }
+        if (registrationTtl == null) {
+            registrationTtl = Duration.ofMinutes(10);
         }
     }
 }

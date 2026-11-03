@@ -1,4 +1,4 @@
-package io.cvvexxx.users.token.dto;
+package io.cvvexxx.users.auth.dto;
 
 import java.util.UUID;
 
@@ -9,6 +9,7 @@ public record TokenPairDto(
         String tokenType,
         long expiresInSeconds,
         UUID userId
-) {
+) implements VerifyResultDto
+{
     public static final String BEARER = "Bearer";
 }
