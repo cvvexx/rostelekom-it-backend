@@ -6,6 +6,7 @@ import io.cvvexxx.services.tariff.dto.UpdateTariffDto;
 import io.cvvexxx.services.tariff.entity.BillingPeriod;
 import io.cvvexxx.services.tariff.entity.Tariff;
 import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
 import io.cvvexxx.services.tariff.repository.TariffRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,10 +107,5 @@ public class TariffService {
                 tariff.isActive(),
                 tariff.getCreatedAt()
         );
-    }
-
-    private class TariffNotFoundException extends RuntimeException {
-        public TariffNotFoundException(String string, UUID id) {
-        }
     }
 }
