@@ -11,19 +11,19 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record CreateTariffDto(
-        @NotBlank(message = "{validation.tariff.name.required}")
-        @Size(max = 100, message = "{validation.tariff.name.size}")
+        @NotBlank(message = "{validation.tariff-create.name.required}")
+        @Size(max = 100, message = "{validation.tariff-create.name.too-long}")
         String name,
 
-        @Size(max = 500, message = "{validation.tariff.description.too-long}")
+        @Size(max = 500, message = "{validation.tariff-create.description.too-long}")
         String description,
 
-        @NotNull(message = "{validation.tariff.category.required}")
+        @NotNull(message = "{validation.tariff-create.category.required}")
         TariffCategory category,
 
-        @NotNull(message = "{validation.tariff.price.required}")
-        @Positive(message = "{validation.tariff.price.positive}")
-        @Digits(integer = 17, fraction = 2, message = "{validation.tariff.price.digits}")
+        @NotNull(message = "{validation.tariff-create.price.required}")
+        @Positive(message = "{validation.tariff-create.price.positive}")
+        @Digits(integer = 17, fraction = 2, message = "{validation.tariff-create.price.digits}")
         BigDecimal price,
 
         BillingPeriod billingPeriod
