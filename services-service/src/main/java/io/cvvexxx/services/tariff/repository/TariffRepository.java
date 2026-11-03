@@ -39,7 +39,7 @@ public interface TariffRepository extends JpaRepository<Tariff, UUID> {
     @Query(value = """
             insert into tariffs (id, name, description, category, price, currency, billing_period, active)
             values (gen_random_uuid(), :name, :description, :category, :price, 'RUB', :billingPeriod, true)
-            on conflict (name) do nothing
+            on conflict (name, category) do nothing
             """, nativeQuery = true)
     int insertIfAbsent(
             @Param("name") String name,
