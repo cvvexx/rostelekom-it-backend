@@ -172,4 +172,14 @@ class SecurityErrorFormatIT {
 
         return new ObjectMapper().readTree(tokens).get("accessToken").asText();
     }
+
+    @Autowired
+    private org.springframework.context.ApplicationContext context;
+
+    @Test
+    @DisplayName("Самоназначение админом (/api/users/admin) есть только в профиле dev")
+    void devAdminController_absentOutsideDevProfile() {
+        org.assertj.core.api.Assertions.assertThat(
+                context.getBeansOfType(io.cvvexxx.users.user.controller.DevAdminController.class)).isEmpty();
+    }
 }
