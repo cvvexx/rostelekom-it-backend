@@ -20,7 +20,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -57,11 +59,17 @@ class PhoneAuthFlowIT {
     }
 
     @Test
-    @DisplayName("Первый вход по номеру: код -> токены -> пользователь создан")
+    @DisplayName("Новый номер: код -> 202 с токеном регистрации -> /register -> токены, юзер создан")
     void firstLogin_createsUserAndIssuesTokens() throws Exception {
         String code = requestOtp("8 (999) 123-45-67").get("code").asText();
 
-        JsonNode tokens = verifyOtp(PHONE, code, status().isOk());
+        JsonNode registration = verifyOtp(PHONE, code, status().isAccepted());
+        assertThat(registration.get("registrationToken").asText()).isNotBlank();
+        assertThat(registration.get("expiresInSeconds").asLong()).isEqualTo(600);
+        assertThat(registration.has("accessToken")).isFalse();
+        assertThat(userRepository.count()).isZero();//До /register юзера ещё нет
+
+        JsonNode tokens = register(registration.get("registrationToken").asText(), status().isCreated());
 
         assertThat(tokens.get("accessToken").asText()).isNotBlank();
         assertThat(tokens.get("refreshToken").asText()).isNotBlank();
@@ -71,34 +79,71 @@ class PhoneAuthFlowIT {
         User saved = userRepository.findByPhone(PHONE).orElseThrow();
         assertThat(saved.getId().toString()).isEqualTo(tokens.get("userId").asText());
         assertThat(saved.getRoles()).containsExactly(Role.USER);
-    }
-
-    @Test
-    @DisplayName("Регистрация: /otp/request подсказывает registered, без ФИО 400 и код не сгорает, ФИО сохраняется")
-    void registration_requiresFullName() throws Exception {
-        JsonNode challenge = requestOtp(PHONE);
-        assertThat(challenge.get("registered").asBoolean()).isFalse();
-        String code = challenge.get("code").asText();
-
-        verifyOtp("""
-                {"phone": "%s", "code": "%s", "lastName": "Иванов"}
-                """.formatted(PHONE, code), status().isBadRequest());
-        assertThat(userRepository.count()).isZero();
-
-        verifyOtp(PHONE, code, status().isOk());//Тот же код всё ещё валиден
-        User saved = userRepository.findByPhone(PHONE).orElseThrow();
-        assertThat(saved.getLastName()).isEqualTo("Иванов");
+        assertThat(saved.getLastName()).isEqualTo("Иванов");//Пробелы по краям обрезаются
         assertThat(saved.getFirstName()).isEqualTo("Иван");
         assertThat(saved.getMiddleName()).isEqualTo("Иванович");
-
-        ((InMemoryOtpStore) otpStore).clear();//Сбрасываем resend-cooldown
-        assertThat(requestOtp(PHONE).get("registered").asBoolean()).isTrue();
     }
 
     @Test
-    @DisplayName("Повторный вход по тому же номеру: нового пользователя не создаём")
+    @DisplayName("Регистрация без имени — 400, токен регистрации при этом не сгорает")
+    void registration_requiresFullName() throws Exception {
+        String registrationToken = registrationToken(PHONE);
+
+        JsonNode error = registerJson("""
+                {"registrationToken": "%s", "lastName": "Иванов"}
+                """.formatted(registrationToken), status().isBadRequest());
+        assertThat(error.at("/errors/firstName").asText()).isEqualTo("Имя обязательно");
+        assertThat(userRepository.count()).isZero();
+
+        register(registrationToken, status().isCreated());//Тот же токен всё ещё валиден
+        assertThat(userRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Токен регистрации одноразовый: второй /register с ним — 400")
+    void registrationToken_isSingleUse() throws Exception {
+        String registrationToken = registrationToken(PHONE);
+        register(registrationToken, status().isCreated());
+
+        JsonNode error = register(registrationToken, status().isBadRequest());
+
+        assertThat(error.get("reason").asText()).isEqualTo("NOT_REQUESTED");
+        assertThat(error.get("detail").asText())
+                .isEqualTo("Сессия регистрации истекла или недействительна, запросите код заново");
+        assertThat(userRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Выдуманный токен регистрации — 400, юзер не создан")
+    void register_unknownToken_returns400() throws Exception {
+        register("not-a-real-token", status().isBadRequest());
+
+        assertThat(userRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Без правильного кода нельзя узнать, зарегистрирован ли номер: ответы одинаковые")
+    void registeredAndNewPhone_lookTheSameWithoutCode() throws Exception {
+        String newPhone = "+79997654321";
+        login(PHONE);//PHONE зарегистрирован, newPhone - нет
+        ((InMemoryOtpStore) otpStore).clear();//Сбрасываем resend-cooldown
+
+        JsonNode registeredChallenge = requestOtp(PHONE);
+        JsonNode newChallenge = requestOtp(newPhone);
+        assertThat(registeredChallenge.has("registered")).isFalse();
+        assertThat(fieldNames(registeredChallenge)).isEqualTo(fieldNames(newChallenge));
+
+        JsonNode registeredError = verifyOtp(PHONE, wrongCode(registeredChallenge), status().isBadRequest());
+        JsonNode newError = verifyOtp(newPhone, wrongCode(newChallenge), status().isBadRequest());
+        assertThat(registeredError.get("reason")).isEqualTo(newError.get("reason"));
+        assertThat(registeredError.get("detail")).isEqualTo(newError.get("detail"));
+        assertThat(registeredError.get("attemptsLeft")).isEqualTo(newError.get("attemptsLeft"));
+    }
+
+    @Test
+    @DisplayName("Повторный вход по тому же номеру: сразу 200 с токенами, нового пользователя не создаём")
     void secondLogin_reusesExistingUser() throws Exception {
-        JsonNode first = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk());
+        JsonNode first = login(PHONE);
 
         ((InMemoryOtpStore) otpStore).clear();
         JsonNode second = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk());
@@ -110,8 +155,7 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("Выданный access-токен открывает доступ к защищённым ручкам")
     void issuedAccessToken_grantsAccessToProtectedEndpoints() throws Exception {
-        String accessToken = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
-                .get("accessToken").asText();
+        String accessToken = login(PHONE).get("accessToken").asText();
 
         mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
@@ -125,8 +169,7 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("Роли пользователя уезжают в claim roles списком")
     void issuedAccessToken_carriesRolesClaim() throws Exception {
-        String accessToken = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
-                .get("accessToken").asText();
+        String accessToken = login(PHONE).get("accessToken").asText();
 
         JsonNode payload = decodePayload(accessToken);
 
@@ -160,14 +203,13 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("Неверный код — 400 с причиной MISMATCH и числом оставшихся попыток")
     void wrongCode_returns400WithReason() throws Exception {
-        String code = requestOtp(PHONE).get("code").asText();
-        String wrong = code.equals("000000") ? "111111" : "000000";
+        JsonNode challenge = requestOtp(PHONE);
 
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван"}
-                                """.formatted(PHONE, wrong)))
+                                {"phone": "%s", "code": "%s"}
+                                """.formatted(PHONE, wrongCode(challenge))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Неверный код"))
                 .andExpect(jsonPath("$.reason").value("MISMATCH"))
@@ -206,16 +248,12 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("Регистрация: имя с цифрами — 400 с текстом из messages.properties, пользователь не создан")
     void registration_nameWithDigits_returns400() throws Exception {
-        String code = requestOtp(PHONE).get("code").asText();
+        JsonNode error = registerJson("""
+                {"registrationToken": "%s", "lastName": "Иванов", "firstName": "Иван2"}
+                """.formatted(registrationToken(PHONE)), status().isBadRequest());
 
-        mockMvc.perform(post("/api/auth/otp/verify")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"phone": "%s", "code": "%s", "lastName": "Иванов", "firstName": "Иван2"}
-                                """.formatted(PHONE, code)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.firstName")
-                        .value("Имя может содержать только буквы, пробел, дефис и апостроф"));
+        assertThat(error.at("/errors/firstName").asText())
+                .isEqualTo("Имя может содержать только буквы, пробел, дефис и апостроф");
         assertThat(userRepository.count()).isZero();
     }
 
@@ -234,7 +272,7 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("refresh: выдаётся новая пара, старый refresh-токен отзывается")
     void refresh_rotatesTokens() throws Exception {
-        JsonNode tokens = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk());
+        JsonNode tokens = login(PHONE);
         String refreshToken = tokens.get("refreshToken").asText();
 
         JsonNode refreshed = objectMapper.readTree(mockMvc.perform(post("/api/auth/refresh")
@@ -260,8 +298,7 @@ class PhoneAuthFlowIT {
     @Test
     @DisplayName("logout: refresh-токен отзывается и обменять его больше нельзя")
     void logout_revokesRefreshToken() throws Exception {
-        String refreshToken = verifyOtp(PHONE, requestOtp(PHONE).get("code").asText(), status().isOk())
-                .get("refreshToken").asText();
+        String refreshToken = login(PHONE).get("refreshToken").asText();
 
         mockMvc.perform(post("/api/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -297,7 +334,7 @@ class PhoneAuthFlowIT {
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "123456", "lastName": "Иванов", "firstName": "Иван"}
+                                {"phone": "%s", "code": "123456"}
                                 """.formatted(PHONE)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.reason").value("NOT_REQUESTED"))
@@ -305,7 +342,7 @@ class PhoneAuthFlowIT {
     }
 
     @Test
-    @DisplayName("Ошибки валидации входа и refresh отдаются текстом из messages.properties")
+    @DisplayName("Ошибки валидации входа, регистрации и refresh отдаются текстом из messages.properties")
     void validationMessages_areResolved() throws Exception {
         mockMvc.perform(post("/api/auth/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -321,11 +358,19 @@ class PhoneAuthFlowIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.refreshToken").value("Refresh-токен обязателен"));
 
-        mockMvc.perform(post("/api/auth/otp/verify")
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.registrationToken").value("Токен регистрации обязателен"))
+                .andExpect(jsonPath("$.errors.lastName").value("Фамилия обязательна"))
+                .andExpect(jsonPath("$.errors.firstName").value("Имя обязательно"));
+
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"phone": "%s", "code": "123456", "firstName": "%s"}
-                                """.formatted(PHONE, "x".repeat(101))))
+                                {"registrationToken": "token", "lastName": "Иванов", "firstName": "%s"}
+                                """.formatted("x".repeat(101))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.firstName").value("Имя слишком длинное"));
     }
@@ -359,20 +404,53 @@ class PhoneAuthFlowIT {
         return objectMapper.readTree(body);
     }
 
-    //ФИО шлём всегда: для нового номера оно обязательно, для существующего игнорируется
     private JsonNode verifyOtp(String phone, String code, ResultMatcher expectedStatus) throws Exception {
-        return verifyOtp("""
-                {"phone": "%s", "code": "%s", "lastName": " Иванов ", "firstName": "Иван", "middleName": "Иванович"}
-                """.formatted(phone, code), expectedStatus);
+        String body = mockMvc.perform(post("/api/auth/otp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"phone": "%s", "code": "%s"}
+                                """.formatted(phone, code)))
+                .andExpect(expectedStatus)
+                .andReturn().getResponse().getContentAsString();
+
+        return objectMapper.readTree(body);
     }
 
-    private JsonNode verifyOtp(String json, ResultMatcher expectedStatus) throws Exception {
-        String body = mockMvc.perform(post("/api/auth/otp/verify")
+    //Код -> verify для нового номера -> токен регистрации
+    private String registrationToken(String phone) throws Exception {
+        return verifyOtp(phone, requestOtp(phone).get("code").asText(), status().isAccepted())
+                .get("registrationToken").asText();
+    }
+
+    //Полный путь нового юзера: код -> токен регистрации -> /register с ФИО -> токены
+    private JsonNode login(String phone) throws Exception {
+        return register(registrationToken(phone), status().isCreated());
+    }
+
+    //ФИО с пробелами по краям, чтобы проверить, что они обрезаются при сохранении
+    private JsonNode register(String registrationToken, ResultMatcher expectedStatus) throws Exception {
+        return registerJson("""
+                {"registrationToken": "%s", "lastName": " Иванов ", "firstName": "Иван", "middleName": "Иванович"}
+                """.formatted(registrationToken), expectedStatus);
+    }
+
+    private JsonNode registerJson(String json, ResultMatcher expectedStatus) throws Exception {
+        String body = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(expectedStatus)
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(body);
+    }
+
+    private static String wrongCode(JsonNode challenge) {
+        return challenge.get("code").asText().equals("000000") ? "111111" : "000000";
+    }
+
+    private static List<String> fieldNames(JsonNode node) {
+        List<String> names = new ArrayList<>();
+        node.fieldNames().forEachRemaining(names::add);
+        return names;
     }
 }

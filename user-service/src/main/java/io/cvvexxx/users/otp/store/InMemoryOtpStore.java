@@ -21,6 +21,10 @@ public class InMemoryOtpStore implements OtpStore {
     private final Map<String, OtpCode> codes = new ConcurrentHashMap<>();
     private final Map<String, Permit> permits = new ConcurrentHashMap<>();
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
+    private final Map<String, Registration> registrations = new ConcurrentHashMap<>();
+
+    private record Registration(String phone, Instant expiresAt) {
+    }
 
     @Override
     public void save(String phone, String code, Duration ttl) {
@@ -103,6 +107,21 @@ public class InMemoryOtpStore implements OtpStore {
         return left.isNegative() ? Duration.ZERO : left;
     }
 
+    @Override
+    public void saveRegistration(String phone, String token, Duration ttl) {
+        registrations.put(token, new Registration(phone, Instant.now().plus(ttl)));
+    }
+
+    //remove атомарный, как GETDEL в редисе: токен одноразовый
+    @Override
+    public Optional<String> consumeRegistration(String registrationToken) {
+        Registration registration = registrations.remove(registrationToken);
+        if (registration == null || !registration.expiresAt().isAfter(Instant.now())) {
+            return Optional.empty();
+        }
+        return Optional.of(registration.phone());
+    }
+
     public Optional<String> peekCode(String phone) {
         OtpCode stored = codes.get(phone);
         if (stored == null || stored.isExpired(Instant.now())) {
@@ -115,6 +134,7 @@ public class InMemoryOtpStore implements OtpStore {
         codes.clear();
         permits.clear();
         windows.clear();
+        registrations.clear();
     }
 
     private boolean matches(String expected, String actual) {

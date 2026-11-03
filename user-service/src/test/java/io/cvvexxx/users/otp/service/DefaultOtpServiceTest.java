@@ -38,7 +38,8 @@ class DefaultOtpServiceTest {
                 maxSends,
                 maxAttempts,
                 exposeCode,
-                "memory"
+                "memory",
+                Duration.ofMinutes(10)
         );
     }
 
@@ -47,6 +48,17 @@ class DefaultOtpServiceTest {
         otpStore = new InMemoryOtpStore();
         smsSender = mock(SmsSender.class);
         otpService = new DefaultOtpService(otpStore, smsSender, properties(true, Duration.ofSeconds(60), 5, 3));
+    }
+
+    @Test
+    @DisplayName("Токен регистрации: по нему достаётся номер, второй раз тот же токен уже не работает")
+    void registrationToken_returnsPhoneOnlyOnce() {
+        String token = otpService.issueRegistrationToken(PHONE);
+
+        assertThat(token).isNotBlank().doesNotContain(PHONE);
+        assertThat(otpService.consumeRegistrationToken(token)).contains(PHONE);
+        assertThat(otpService.consumeRegistrationToken(token)).isEmpty();
+        assertThat(otpService.consumeRegistrationToken("unknown")).isEmpty();
     }
 
     @Test

@@ -1,6 +1,5 @@
 package io.cvvexxx.users.advice;
 
-import io.cvvexxx.users.auth.exception.FullNameRequiredException;
 import io.cvvexxx.users.otp.exception.InvalidOtpException;
 import io.cvvexxx.users.otp.exception.OtpRequestNotAllowedException;
 import io.cvvexxx.users.phone.InvalidPhoneNumberException;
@@ -54,12 +53,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     //По идее должно обрабатываться на фронте, но на всякий случай сделал
     @ExceptionHandler(InvalidPhoneNumberException.class)
     public ProblemDetail handleInvalidPhoneNumber(InvalidPhoneNumberException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
-    }
-
-    //Новый номер входит без фамилии/имени (DefaultAuthService.verifyOtp)
-    @ExceptionHandler(FullNameRequiredException.class)
-    public ProblemDetail handleFullNameRequired(FullNameRequiredException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(e));
     }
 

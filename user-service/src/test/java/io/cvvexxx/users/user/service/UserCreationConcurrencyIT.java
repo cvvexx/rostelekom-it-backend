@@ -51,8 +51,8 @@ class UserCreationConcurrencyIT {
     private UserRepository userRepository;
 
     @Test
-    @DisplayName("Параллельный вход с одного нового номера: создаётся ровно один юзер, все потоки получают его")
-    void parallelFindOrCreate_createsSingleUser() throws Exception {
+    @DisplayName("Параллельная регистрация одного нового номера: создаётся ровно один юзер, все потоки получают его")
+    void parallelCreate_createsSingleUser() throws Exception {
         String phone = "+79990000101";
         int threads = 8;
         CountDownLatch start = new CountDownLatch(1);
@@ -62,7 +62,7 @@ class UserCreationConcurrencyIT {
             List<? extends Future<UUID>> futures = IntStream.range(0, threads)
                     .mapToObj(i -> pool.submit(() -> {
                         start.await();
-                        return userService.findOrCreateByPhone(phone, "Иванов", "Иван", null).getId();
+                        return userService.createByPhone(phone, "Иванов", "Иван", null).getId();
                     }))
                     .toList();
 
@@ -71,7 +71,7 @@ class UserCreationConcurrencyIT {
                 try {
                     return future.get();
                 } catch (Exception e) {
-                    throw new AssertionError("findOrCreateByPhone failed under concurrency", e);
+                    throw new AssertionError("createByPhone failed under concurrency", e);
                 }
             }).toList();
         }

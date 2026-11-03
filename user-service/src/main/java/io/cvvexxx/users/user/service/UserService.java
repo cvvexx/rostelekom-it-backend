@@ -3,13 +3,14 @@ package io.cvvexxx.users.user.service;
 import io.cvvexxx.users.user.dto.UserProfileDto;
 import io.cvvexxx.users.user.entity.User;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserService {
 
-    boolean existsByPhone(String phone);
+    Optional<User> findByPhone(String phone);
 
-    User findOrCreateByPhone(String phone, String lastName, String firstName, String middleName);
+    User createByPhone(String phone, String lastName, String firstName, String middleName);
 
     UserProfileDto getProfile(UUID userId);
 

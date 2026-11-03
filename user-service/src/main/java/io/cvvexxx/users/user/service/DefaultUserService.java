@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service //Аннотация спринга, аналогично @RestController, только эта просто создает бин класса
@@ -24,16 +25,27 @@ public class DefaultUserService implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsByPhone(String phone) {
-        return userRepository.existsByPhone(phone);
+    public Optional<User> findByPhone(String phone) {
+        return userRepository.findByPhone(phone);
     }
 
-    //ФИО используется только при создании, у существующего юзера не перезаписывается
+    //Создаем юзера при регистрации, если юзер с таким номером уже есть - возвращаем его, ФИО не перезаписываем
     @Override
     @Transactional //Весь метод в одной транзакции (как async with session.begin()), при RuntimeException будет rollback
-    public User findOrCreateByPhone(String phone, String lastName, String firstName, String middleName) {
-        return userRepository.findByPhone(phone)//Ищем юзера в бд, если находим, то возвращаем
-                .orElseGet(() -> createUser(phone, lastName, firstName, middleName));//Иначе создаем его
+    public User createByPhone(String phone, String lastName, String firstName, String middleName) {
+        //Если два потока одновременно захотят создать юзера, то это здесь обрабатывается
+        UUID id = UUID.randomUUID();
+        //Атомарная операция, возвращает 1, если юзера создает, и 0, если конфликт и такой юзер уже есть
+        if (userRepository.insertIfAbsent(id, phone, trimToNull(lastName), trimToNull(firstName),
+                trimToNull(middleName), Instant.now()) == 1) {
+            userRepository.insertRole(id, Role.USER.name());//Если юзер создан, то привязываем ему роль
+            log.info("Created user {} on registration", id);
+        } else {
+            log.debug("Concurrent user creation for the same phone, reading the existing one");
+        }
+        //В любой случае читаем и возвращаем юзера
+        return userRepository.findByPhone(phone)
+                .orElseThrow(() -> new IllegalStateException("User with phone was not created"));
     }
 
     @Override
@@ -52,21 +64,6 @@ public class DefaultUserService implements UserService {
         }
     }
 
-    private User createUser(String phone, String lastName, String firstName, String middleName) {
-        //Если два потока одновременно захотят создать юзера, то это здесь обрабатывается
-        UUID id = UUID.randomUUID();
-        //Атомарная операция, возвращает 1, если юзера создает, и 0, если конфликт и такой юзер уже есть
-        if (userRepository.insertIfAbsent(id, phone, trimToNull(lastName), trimToNull(firstName),
-                trimToNull(middleName), Instant.now()) == 1) {
-            userRepository.insertRole(id, Role.USER.name());//Если юзер создан, то привязываем ему роль
-            log.info("Created user {} on first successful OTP verification", id);
-        } else {
-            log.debug("Concurrent user creation for the same phone, reading the existing one");
-        }
-        //В любой случае читаем и возвращаем юзера
-        return userRepository.findByPhone(phone)
-                .orElseThrow(() -> new IllegalStateException("User with phone was not created"));
-    }
 
     private static String trimToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();

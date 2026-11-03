@@ -5,8 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 //DTO для подтверждения кода
-//ФИО нужно только при первом входе (регистрации), для уже зарегистрированного номера игнорируется.
-//Обязательность фамилии/имени для нового номера проверяет DefaultAuthService, т.к. DTO не знает, новый ли номер
+//ФИО тут нет: для нового номера его спрашиваем уже после проверки кода, в RegisterDto
 public record OtpVerifyDto(
         @NotBlank(message = "{validation.otp-verify.phone.required}") //Не null, не пустая и не из одних пробелов
         @Size(max = 20, message = "{validation.otp-verify.phone.too-long}") //Как Field(max_length=20)
@@ -14,21 +13,7 @@ public record OtpVerifyDto(
 
         @NotBlank(message = "{validation.otp-verify.code.required}")
         @Pattern(regexp = "\\d{4,8}", message = "{validation.otp-verify.code.pattern}") //Как Field(pattern=...)
-        String code,
-
-        @Size(max = 100, message = "{validation.full-name.last-name.too-long}")
-        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.last-name.pattern}")
-        String lastName,
-
-        @Size(max = 100, message = "{validation.full-name.first-name.too-long}")
-        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.first-name.pattern}")
-        String firstName,
-
-        @Size(max = 100, message = "{validation.full-name.middle-name.too-long}")
-        @Pattern(regexp = NAME_PATTERN, message = "{validation.full-name.middle-name.pattern}")
-        String middleName
+        String code
 ) {
-    //Буквы любого алфавита, между ними пробел, дефис или апостроф
-    //Пустая строка проходит: обязательность проверяет DefaultAuthService, пустое отчество станет null
-    private static final String NAME_PATTERN = "\\s*(\\p{L}+([ '’-]\\p{L}+)*)?\\s*";
 }
+

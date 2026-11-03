@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor //Lombok: конструктор из final-полей (redis)
@@ -15,6 +16,7 @@ public class RedisOtpStore implements OtpStore {
     private static final String CODE_KEY_PREFIX = "otp:code:";
     private static final String PERMIT_KEY_PREFIX = "otp:permit:";
     private static final String WINDOW_KEY_PREFIX = "otp:window:";
+    private static final String REGISTRATION_KEY_PREFIX = "otp:reg:";
 
     //Ниже три Lua скрипта, которые позволяют редису работать атомарно, чтобы не возникало race condition
     //у разных потоков
@@ -120,6 +122,18 @@ public class RedisOtpStore implements OtpStore {
         //Получаем сколько осталось до окончания TTL окна
         Long millis = redis.getExpire(windowKey(phone), TimeUnit.MILLISECONDS);
         return millis == null || millis < 0 ? Duration.ZERO : Duration.ofMillis(millis);
+    }
+
+    //Ключ - токен регистрации, значение - номер телефона, через TTL редис сам удалит ключ
+    @Override
+    public void saveRegistration(String phone, String token, Duration ttl) {
+        redis.opsForValue().set(REGISTRATION_KEY_PREFIX + token, phone, ttl);
+    }
+
+    //GETDEL - атомарно достаем и удаляем, поэтому два параллельных запроса с одним токеном не пройдут оба
+    @Override
+    public Optional<String> consumeRegistration(String registrationToken) {
+        return Optional.ofNullable(redis.opsForValue().getAndDelete(REGISTRATION_KEY_PREFIX + registrationToken));
     }
 
     private String codeKey(String phone) {

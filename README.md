@@ -54,18 +54,20 @@ Swagger открывается напрямую на сервисе, а не ч�
 
 ### Вход и регистрация
 
-Регистрации как отдельного шага нет: если номера ещё нет в базе, юзер создаётся при первом входе.
+Вход и регистрация начинаются одинаково: запросить код и подтвердить его. Узнать, новый номер или нет, можно только после правильного кода, иначе по ответам можно было бы перебирать чужие номера.
 
 | Запрос | Тело | Ответ |
 |---|---|---|
-| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds, registered }` — `code` приходит только в dev |
-| `POST /api/auth/otp/verify` | `{ "phone", "code", "lastName", "firstName", "middleName" }` | `{ accessToken, refreshToken, tokenType, expiresInSeconds, userId }` |
+| `POST /api/auth/otp/request` | `{ "phone": "+79991234567" }` | `{ phone, code, expiresInSeconds, resendAfterSeconds }` — `code` приходит только в dev |
+| `POST /api/auth/otp/verify` | `{ "phone", "code" }` | номер зарегистрирован: `200 { accessToken, refreshToken, tokenType, expiresInSeconds, userId }`<br>номер новый: `202 { registrationToken, expiresInSeconds }` |
+| `POST /api/auth/register` | `{ "registrationToken", "lastName", "firstName", "middleName" }` | `201`, тело как у `200` в `/otp/verify` |
 | `POST /api/auth/refresh` | `{ "refreshToken" }` | новая пара токенов |
 | `POST /api/auth/logout` | `{ "refreshToken" }` | `204` |
 
 - Access-токен живёт 15 минут, refresh — 30 дней.
 - **Refresh одноразовый.** После `/refresh` сохраняй новую пару и выбрасывай старую. Повторное использование старого refresh завершает **все** сессии юзера. Если фронт открыт в нескольких вкладках, refresh должен делать кто-то один, иначе юзера будет выкидывать.
-- **Регистрация.** Если `/otp/request` вернул `registered: false`, номер новый: покажи поля ФИО рядом с полем кода. Для нового номера `lastName` и `firstName` обязательны (до 100 символов), `middleName` — по желанию. Без них `/otp/verify` вернёт `400`, код при этом не сгорает. Для зарегистрированного номера ФИО не нужно и игнорируется.
+- **Регистрация.** Если `/otp/verify` вернул `202`, номер новый: покажи форму ФИО и отправь её в `/register` вместе с `registrationToken`. `lastName` и `firstName` обязательны (до 100 символов), `middleName` — по желанию. Ошибка валидации (`400` с `errors`) токен не сжигает, можно поправить поля и отправить снова.
+- **`registrationToken` одноразовый и живёт `expiresInSeconds` (10 минут).** Если он истёк или уже использован, `/register` вернёт `400` с `reason: NOT_REQUESTED`: отправь юзера заново запрашивать код.
 - Повторно запросить код можно через `resendAfterSeconds`. При частых запросах придёт `429` с заголовком `Retry-After`.
 
 ### Профиль
