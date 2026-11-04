@@ -24,7 +24,7 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "app.payment.provider", havingValue = "yookassa")
 public class YooKassaPaymentProvider implements PaymentProvider {
 
-    //Та1мауты для рест клиента
+    //Таймауты для рест клиента
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
@@ -59,7 +59,9 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         return "YOOKASSA";
     }
 
-    //Метод создания платежа в юкассе, ключ идемпотентости не используем, тк он уникальный только для аккаунта
+    //Метод создания платежа в юкассе. idempotencyKey от фронта сюда не шлём: он уникален только в пределах счёта,
+    //а юкассе нужна уникальность в пределах магазина. Вместо него Idempotence-Key = paymentId: ключ фронта у нас в бд
+    //всегда даёт один и тот же paymentId, так что повтор запроса не создаст второй платёж в юкассе
     @Override
     public ProviderPayment create(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
         var request = new CreateRequest(
@@ -91,7 +93,9 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         return toProviderStatus(response.status());
     }
 
-    //По факту не отменяем платеж, а переводим его в Pending, потому что для отмены нужны другие настройки юкассы
+    //Отменить pending-платёж через API юкассы нельзя (при capture=true /cancel работает только для waiting_for_capture),
+    //неоплаченный она отменит сама по истечении срока. Поэтому просто возвращаем текущий статус у неё:
+    //SUCCEEDED - юзер успел оплатить и деньги зачислятся, CANCELED - отменяем и у нас, PENDING - пока отменить нельзя
     @Override
     public ProviderStatus cancel(String providerPaymentId) {
         return fetchStatus(providerPaymentId);
