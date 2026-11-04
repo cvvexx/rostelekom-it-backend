@@ -21,6 +21,9 @@ import java.util.UUID;
 public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
 
     @EntityGraph(attributePaths = "tariff")
+    Page<Subscription> findByUserId(UUID userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "tariff")
     Page<Subscription> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     @EntityGraph(attributePaths = "tariff")
@@ -40,6 +43,25 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Subscription s join fetch s.tariff where s.id = :id and s.userId = :userId")
     Optional<Subscription> findByIdAndUserIdForUpdate(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    @Modifying
+    @Query(value = """
+            insert into subscriptions (id, user_id, tariff_id, status, price, currency,
+                                       current_period_start, next_charge_at, charge_locked_until)
+            values (:id, :userId, :tariffId, 'ACTIVE', :price, :currency,
+                    :periodStart, :nextChargeAt, :lockedUntil)
+            on conflict (user_id, tariff_id) where status in ('ACTIVE', 'SUSPENDED') do nothing
+            """, nativeQuery = true)
+    int insertActiveIfAbsent(
+            @Param("id") UUID id,
+            @Param("userId") UUID userId,
+            @Param("tariffId") UUID tariffId,
+            @Param("price") BigDecimal price,
+            @Param("currency") String currency,
+            @Param("periodStart") Instant periodStart,
+            @Param("nextChargeAt") Instant nextChargeAt,
+            @Param("lockedUntil") Instant lockedUntil
+    );
 
     //Забирает пачку подписок к списанию и ставит lease одним запросом. Строки блокируются только на время запроса:
     //skip locked - параллельные инстансы берут разные подписки, lease - пока идёт HTTP в billing, подписку никто не возьмёт

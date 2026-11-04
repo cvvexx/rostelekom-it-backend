@@ -12,7 +12,7 @@ public record SubscriptionDto(
         UUID id,
         UUID userId,
         UUID tariffId,
-        String TariffName,
+        String tariffName,
         TariffCategory tariffCategory,
         SubscriptionStatus status,
         BigDecimal price,
@@ -22,7 +22,7 @@ public record SubscriptionDto(
         Instant nextChargeAt,
         boolean cancelAtPeriodEnd,
         Instant canceledAt,
-        UUID lastChargeTransactionalId,
+        UUID lastChargeTransactionId,
         Instant createdAt
 ) {
 }
