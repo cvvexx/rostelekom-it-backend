@@ -23,6 +23,9 @@ public class YooKassaWebhookController {
 
     private final PaymentService paymentService;
 
+    //TODO(мб проверять айпишник юкассы)
+    //По факту чужой запрос закрыть платеж не может, т.к. мы спрашиваем у провайдера статус, но эндпоинт можно нагрузить
+    //поэтому лучше для оптимизации добавить
     @PostMapping
     public ResponseEntity<Void> handle(@RequestBody Notification notification) {
         try {
@@ -34,10 +37,15 @@ public class YooKassaWebhookController {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record Notification(String event, NotificationObject object) {
+    record Notification(
+            String event,
+            NotificationObject object
+    ) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record NotificationObject(String id) {
+    record NotificationObject(
+            String id
+    ) {
     }
 }

@@ -19,16 +19,19 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
+//Создаем бин только если в пропертях есть соответствующая настройка
 @Component
 @ConditionalOnProperty(name = "app.payment.provider", havingValue = "yookassa")
 public class YooKassaPaymentProvider implements PaymentProvider {
 
+    //Та1мауты для рест клиента
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
     private final RestClient restClient;
     private final String returnUrl;
 
+    //Основной конструктор, второй для тестов
     @Autowired
     public YooKassaPaymentProvider(
             @Value("${app.payment.yookassa.base-url:https://api.yookassa.ru/v3}") String baseUrl,
@@ -56,8 +59,7 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         return "YOOKASSA";
     }
 
-    //idempotencyKey не используем: у нас он уникален в пределах счёта, а у ЮKassa - в пределах всего магазина.
-    //paymentId тоже стабилен при повторах запроса с тем же ключом, поэтому идемпотентность сохраняется
+    //Метод создания платежа в юкассе, ключ идемпотентости не используем, тк он уникальный только для аккаунта
     @Override
     public ProviderPayment create(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
         var request = new CreateRequest(
@@ -78,6 +80,7 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         return new ProviderPayment(response.id(), response.confirmation().confirmationUrl());
     }
 
+    //Спрашиваем статус у юкассы
     @Override
     public ProviderStatus fetchStatus(String providerPaymentId) {
         PaymentResponse response = restClient.get()
@@ -88,11 +91,13 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         return toProviderStatus(response.status());
     }
 
+    //По факту не отменяем платеж, а переводим его в Pending, потому что для отмены нужны другие настройки юкассы
     @Override
     public ProviderStatus cancel(String providerPaymentId) {
         return fetchStatus(providerPaymentId);
     }
 
+    //Преобразуем статус юкассы в наш enum
     static ProviderStatus toProviderStatus(String status) {
         return switch (status) {
             case "pending", "waiting_for_capture" -> ProviderStatus.PENDING;
@@ -102,12 +107,14 @@ public class YooKassaPaymentProvider implements PaymentProvider {
         };
     }
 
+    //Выставляем таймауты для рест клиента
     private static JdkClientHttpRequestFactory requestFactory() {
         var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
         factory.setReadTimeout(READ_TIMEOUT);
         return factory;
     }
 
+    //Ниже Dto
     private record CreateRequest(
             Amount amount,
             boolean capture,
@@ -129,6 +136,7 @@ public class YooKassaPaymentProvider implements PaymentProvider {
     ) {
     }
 
+    //Если в ответе есть какие-то дополнительные поля, то их игнорируем
     @JsonIgnoreProperties(ignoreUnknown = true)
     record PaymentResponse(
             String id,
