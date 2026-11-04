@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -42,6 +43,7 @@ public class SecurityBeans {
                 .authorizeHttpRequests(
                         request -> request
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/billing/yookassa/webhook").permitAll()//Webhook ЮKassa приходит без JWT
                                 .requestMatchers("/fallback/**", "/error").permitAll()
                                 .anyRequest().authenticated()
                 )

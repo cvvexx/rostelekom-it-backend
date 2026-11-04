@@ -1,7 +1,9 @@
 package io.cvvexxx.billings.config;
 
 
+import io.cvvexxx.billings.payment.provider.yookassa.YooKassaWebhookController;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,6 +35,7 @@ public class SecurityBeans {
                 .csrf(AbstractHttpConfigurer::disable)//CSRF не нужен: cookie-сессий нет, токен приходит в заголовке
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, YooKassaWebhookController.PATH).permitAll()//Webhook ЮKassa приходит без JWT
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
