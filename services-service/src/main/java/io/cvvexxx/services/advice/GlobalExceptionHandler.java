@@ -1,5 +1,6 @@
 package io.cvvexxx.services.advice;
 
+import io.cvvexxx.services.subscription.exception.ChargeDeclinedException;
 import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyCanceledException;
 import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyExistsException;
 import io.cvvexxx.services.subscription.exception.SubscriptionNotFoundException;
@@ -38,7 +39,8 @@ public class GlobalExceptionHandler {
             TariffAlreadyExistsException.class,
             TariffInactiveException.class,
             SubscriptionAlreadyExistsException.class,
-            SubscriptionAlreadyCanceledException.class
+            SubscriptionAlreadyCanceledException.class,
+            ChargeDeclinedException.class
     })
     public ResponseEntity<ProblemDetail> handleConflict(LocalizedException e, Locale locale) {
         return problem(HttpStatus.CONFLICT, e, locale);
