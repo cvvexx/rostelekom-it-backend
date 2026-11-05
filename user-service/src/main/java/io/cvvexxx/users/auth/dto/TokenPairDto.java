@@ -7,8 +7,7 @@ public record TokenPairDto(
         String accessToken,
         String refreshToken,
         String tokenType,
-        long expiresInSeconds,
-        UUID userId
+        long expiresInSeconds
 ) implements VerifyResultDto
 {
     public static final String BEARER = "Bearer";
