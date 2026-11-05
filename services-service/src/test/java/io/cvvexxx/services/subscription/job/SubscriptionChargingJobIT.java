@@ -73,6 +73,7 @@ class SubscriptionChargingJobIT {
     @BeforeEach
     void setUp() {
         jdbc.update("delete from subscriptions");
+        jdbc.update("delete from tariffs");
         tariffId = jdbc.queryForObject("""
                 insert into tariffs (id, name, category, price) values (gen_random_uuid(), 'Интернет 500', 'INTERNET', 499.00)
                 returning id
