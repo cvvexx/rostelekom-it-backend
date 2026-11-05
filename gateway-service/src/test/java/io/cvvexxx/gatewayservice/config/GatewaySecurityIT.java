@@ -8,6 +8,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -18,9 +20,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-//user-service направлен на заведомо закрытый порт: запрос, прошедший security, упирается в CircuitBreaker
+//user-service и services-service направлены на заведомо закрытый порт: запрос, прошедший security, упирается в CircuitBreaker
 //и уходит forward на fallback (MockMvc сам forward не выполняет, только запоминает адрес)
-@SpringBootTest(properties = "USER_SERVICE_URI=http://localhost:1")
+@SpringBootTest(properties = {"USER_SERVICE_URI=http://localhost:1", "SERVICES_SERVICE_URI=http://localhost:1"})
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
 class GatewaySecurityIT {
@@ -59,5 +61,39 @@ class GatewaySecurityIT {
     void authRouteIsPublic() throws Exception {
         mockMvc.perform(post("/api/auth/otp"))
                 .andExpect(forwardedUrl("/fallback/users"));
+    }
+
+    @Test
+    @DisplayName("Каталог тарифов доступен без токена и уходит в services-service")
+    void tariffsCatalogIsPublic() throws Exception {
+        mockMvc.perform(get("/api/services/tariffs"))
+                .andExpect(forwardedUrl("/fallback/services"));
+        mockMvc.perform(get("/api/services/tariffs/{id}", UUID.randomUUID()))
+                .andExpect(forwardedUrl("/fallback/services"));
+    }
+
+    @Test
+    @DisplayName("Изменение тарифов и подписки без токена отклоняются на gateway с 401")
+    void servicesWriteRoutesRequireToken() throws Exception {
+        mockMvc.perform(post("/api/services/tariffs"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/services/subscriptions/my"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Подписки с валидным токеном проходят дальше к services-service")
+    void subscriptionsWithToken() throws Exception {
+        mockMvc.perform(get("/api/services/subscriptions/my").with(jwt()))
+                .andExpect(forwardedUrl("/fallback/services"));
+    }
+
+    @Test
+    @DisplayName("Fallback services-service отвечает 503 в ProblemDetail")
+    void servicesFallback() throws Exception {
+        mockMvc.perform(get("/fallback/services"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.detail").value("Сервис услуг временно недоступен, попробуйте позже"));
     }
 }
