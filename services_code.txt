@@ -1,0 +1,2965 @@
+﻿=== C:\Users\olegb\rostelekom-it-backend\services-service\pom.xml ===
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.cvvexxx</groupId>
+        <artifactId>rostelekom</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>services</artifactId>
+    <name>services-service</name>
+    <description>services-service</description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.projectlombok</groupId>
+                                    <artifactId>lombok</artifactId>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.projectlombok</groupId>
+                                    <artifactId>lombok</artifactId>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\ServicesServiceApplication.java ===
+package io.cvvexxx.services;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
+@SpringBootApplication
+@EnableMethodSecurity//Включает @PreAuthorize(hasRole('ADMIN')) на методах контроллеров
+public class ServicesServiceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ServicesServiceApplication.class, args);
+    }
+
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\advice\GlobalExceptionHandler.java ===
+package io.cvvexxx.services.advice;
+
+import io.cvvexxx.services.subscription.exception.ChargeDeclinedException;
+import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyCanceledException;
+import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyExistsException;
+import io.cvvexxx.services.subscription.exception.SubscriptionNotFoundException;
+import io.cvvexxx.services.subscription.exception.TariffInactiveException;
+import io.cvvexxx.services.tariff.exception.TariffAlreadyExistsException;
+import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestControllerAdvice
+@RequiredArgsConstructor
+@Slf4j
+public class GlobalExceptionHandler {
+
+    private final MessageSource messageSource;
+
+    @ExceptionHandler({TariffNotFoundException.class, SubscriptionNotFoundException.class})
+    public ResponseEntity<ProblemDetail> handleNotFound(LocalizedException e, Locale locale) {
+        return problem(HttpStatus.NOT_FOUND, e, locale);
+    }
+
+    @ExceptionHandler({
+            TariffAlreadyExistsException.class,
+            TariffInactiveException.class,
+            SubscriptionAlreadyExistsException.class,
+            SubscriptionAlreadyCanceledException.class,
+            ChargeDeclinedException.class
+    })
+    public ResponseEntity<ProblemDetail> handleConflict(LocalizedException e, Locale locale) {
+        return problem(HttpStatus.CONFLICT, e, locale);
+    }
+
+    @ExceptionHandler(InvalidSortException.class)
+    public ResponseEntity<ProblemDetail> handleBadRequest(LocalizedException e, Locale locale) {
+        return problem(HttpStatus.BAD_REQUEST, e, locale);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException e, Locale locale) {
+        String detail = messageSource.getMessage("error.validation-failed", null, locale);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setProperty("code", "error.validation-failed");
+
+        Map<String, String> errors = e.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid value",
+                        (first, second) -> first
+                ));
+        problem.setProperty("errors", errors);
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException e, Locale locale) {
+        String detail = messageSource.getMessage("error.forbidden", null, locale);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, detail);
+        problem.setProperty("code", "error.forbidden");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ProblemDetail> handleUnhandled(Exception e, Locale locale) {
+        log.error("Unhandled exception", e);
+        String detail = messageSource.getMessage("error.internal", null, locale);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, detail);
+        problem.setProperty("code", "error.internal");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
+    }
+
+    private ResponseEntity<ProblemDetail> problem(HttpStatus status, LocalizedException e, Locale locale) {
+        String detail = messageSource.getMessage(e.getMessage(), e.getArgs(), e.getMessage(), locale);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setProperty("code", e.getMessage());
+        return ResponseEntity.status(status).body(problem);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\advice\InvalidSortException.java ===
+package io.cvvexxx.services.advice;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
+import java.util.Set;
+
+public class InvalidSortException extends LocalizedException {
+
+    public InvalidSortException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+
+    public static void requireAllowed(Pageable pageable, Set<String> allowed) {
+        for (Sort.Order order : pageable.getSort()) {
+            if (!allowed.contains(order.getProperty())) {
+                throw new InvalidSortException("error.invalid-sort", order.getProperty(), String.join(", ", allowed));
+            }
+        }
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\advice\LocalizedException.java ===
+package io.cvvexxx.services.advice;
+
+import lombok.Getter;
+
+@Getter
+public abstract class LocalizedException extends RuntimeException {
+
+    private final Object[] args;
+
+    protected LocalizedException(String messageCode, Object... args) {
+        super(messageCode);
+        this.args = args;
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\client\BillingServiceRestClient.java ===
+package io.cvvexxx.services.client;
+
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+
+public interface BillingServiceRestClient {
+
+    ChargeOutcome createCharge(CreateChargeDto createChargeDto);
+
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\client\BillingServiceRestClientImpl.java ===
+package io.cvvexxx.services.client;
+
+import io.cvvexxx.services.subscription.dto.ChargeDto;
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClient;
+
+import java.util.Map;
+
+@RequiredArgsConstructor
+public class BillingServiceRestClientImpl implements BillingServiceRestClient {
+
+    //Коды из messages.properties billing-service, приходят в поле code у ProblemDetail
+    private static final String INSUFFICIENT_FUNDS_CODE = "charge.insufficient-funds";
+    private static final String ACCOUNT_BLOCKED_CODE = "charge.account-blocked";
+    private static final String ACCOUNT_NOT_FOUND_CODE = "account.not-found-by-user";
+    private static final String ACCOUNT_CLOSED_CODE = "charge.account-closed";
+
+    private final RestClient restClient;
+
+    @Override
+    public ChargeOutcome createCharge(CreateChargeDto createChargeDto) {
+        try {
+            ChargeDto charge = restClient
+                    .post()
+                    .uri("/internal/billing/charges")
+                    .body(createChargeDto)
+                    .retrieve()
+                    .body(ChargeDto.class);
+            return new ChargeOutcome.Charged(charge.transactionId());
+        } catch (HttpClientErrorException.Conflict | HttpClientErrorException.NotFound e) {
+            String code = problemCode(e);
+            return switch (code) {
+                case INSUFFICIENT_FUNDS_CODE, ACCOUNT_BLOCKED_CODE, ACCOUNT_NOT_FOUND_CODE -> new ChargeOutcome.Declined(code);
+                case ACCOUNT_CLOSED_CODE -> new ChargeOutcome.AccountClosed();
+                case null, default -> throw e;
+            };
+        }
+    }
+
+    private static String problemCode(HttpClientErrorException e) {
+        ProblemDetail problem = e.getResponseBodyAs(ProblemDetail.class);
+        Map<String, Object> properties = problem == null ? null : problem.getProperties();
+        return properties != null && properties.get("code") instanceof String code ? code : null;
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\client\ChargeOutcome.java ===
+package io.cvvexxx.services.client;
+
+import java.util.UUID;
+
+public sealed interface ChargeOutcome {
+
+    record Charged(UUID transactionId) implements ChargeOutcome {
+    }
+
+    record Declined(String code) implements ChargeOutcome {
+    }
+
+    record AccountClosed() implements ChargeOutcome {
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\client\ServiceTokenInterceptor.java ===
+package io.cvvexxx.services.client;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.locks.ReentrantLock;
+
+//Добавляет сервисный токен от user-service в межсервисные запросы (billing и т.п.).
+//Токен держим в памяти и берём новый за REFRESH_BEFORE до истечения, refresh-токена у сервисного нет
+@Component
+public class ServiceTokenInterceptor implements ClientHttpRequestInterceptor {
+
+    //Запас, чтобы токен не истёк, пока запрос идёт по сети
+    private static final Duration REFRESH_BEFORE = Duration.ofSeconds(30);
+
+    private final RestClient userServiceClient;
+    private final ServiceTokenRequest credentials;
+
+    private final ReentrantLock lock = new ReentrantLock();
+    private volatile CachedToken token;
+
+    public ServiceTokenInterceptor(RestClient.Builder builder,
+                                   @Value("${rostelekom.uri.user-service}") String userServiceUri,
+                                   @Value("${app.service-auth.client-id}") String clientId,
+                                   @Value("${app.service-auth.client-secret}") String clientSecret) {
+        this.userServiceClient = builder.baseUrl(userServiceUri).build();
+        this.credentials = new ServiceTokenRequest(clientId, clientSecret);
+    }
+
+    @Override
+    public ClientHttpResponse intercept(
+            HttpRequest request, byte[] body, ClientHttpRequestExecution execution
+    ) throws IOException {
+        request.getHeaders().setBearerAuth(token());
+        ClientHttpResponse response = execution.execute(request, body);
+        if (response.getStatusCode().value() == HttpStatus.UNAUTHORIZED.value()) {
+            token = null;
+        }
+        return response;
+    }
+
+    private String token() {
+        CachedToken current = token;
+        if (current != null && Instant.now().isBefore(current.refreshAt())) {
+            return current.value();
+        }
+        lock.lock();
+        try {
+            //Пока ждали lock, токен мог обновить другой поток
+            current = token;
+            if (current != null && Instant.now().isBefore(current.refreshAt())) {
+                return current.value();
+            }
+            ServiceTokenResponse response = userServiceClient
+                    .post()
+                    .uri("/internal/auth/service-token")
+                    .body(credentials)
+                    .retrieve()
+                    .body(ServiceTokenResponse.class);
+            if (response == null || response.accessToken() == null) {
+                throw new IllegalStateException("user-service вернул пустой сервисный токен");
+            }
+            Instant refreshAt = Instant.now().plusSeconds(response.expiresInSeconds()).minus(REFRESH_BEFORE);
+            token = new CachedToken(response.accessToken(), refreshAt);
+            return response.accessToken();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private record CachedToken(String value, Instant refreshAt) {
+    }
+
+    private record ServiceTokenRequest(String clientId, String clientSecret) {
+    }
+
+    private record ServiceTokenResponse(String accessToken, long expiresInSeconds) {
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\config\RestClientConfig.java ===
+package io.cvvexxx.services.config;
+
+
+import io.cvvexxx.services.client.ServiceTokenInterceptor;
+import io.cvvexxx.services.client.BillingServiceRestClientImpl;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+public class RestClientConfig {
+
+    @Bean
+    public BillingServiceRestClientImpl billingServiceRestClient(
+            @Value("${rostelekom.uri.billing-service}") String billingServiceUrl,
+            ServiceTokenInterceptor serviceTokenInterceptor,
+            RestClient.Builder builder//бин от спринг бута, чтобы он подтянул пропети из spring.http.clients*
+    ) {
+        return new BillingServiceRestClientImpl(
+            builder
+                    .baseUrl(billingServiceUrl)
+                    .requestInterceptor(serviceTokenInterceptor)
+                    .build()
+        );
+    }
+
+    
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\config\SchedulingBeans.java ===
+package io.cvvexxx.services.config;
+
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@Configuration
+@EnableScheduling
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
+public class SchedulingBeans {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\config\SecurityBeans.java ===
+package io.cvvexxx.services.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Configuration
+public class SecurityBeans {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/v3/api-docs/", "/swagger-ui/", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/services/tariffs/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/services/tariffs", "/api/services/tariffs/*").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                )
+                .build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            if (roles == null) {
+                return List.of();
+            }
+            return roles.stream()
+                    .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+        });
+        return converter;
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\controller\SubscriptionController.java ===
+package io.cvvexxx.services.subscription.controller;
+
+import io.cvvexxx.services.advice.InvalidSortException;
+import io.cvvexxx.services.subscription.dto.CreateSubscriptionDto;
+import io.cvvexxx.services.subscription.dto.SubscriptionDto;
+import io.cvvexxx.services.subscription.service.SubscriptionService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/services/subscriptions")
+public class SubscriptionController {
+
+    private static final Set<String> SORT_FIELDS = Set.of("createdAt", "nextChargeAt", "price", "status");
+
+    private final SubscriptionService subscriptionService;
+
+    @PostMapping
+    public ResponseEntity<SubscriptionDto> subscribe(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody @Valid CreateSubscriptionDto createSubscriptionDto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(subscriptionService.subscribe(currentUserId(jwt), createSubscriptionDto.tariffId()));
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<PagedModel<SubscriptionDto>> getMySubscriptions(
+            @AuthenticationPrincipal Jwt jwt,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        InvalidSortException.requireAllowed(pageable, SORT_FIELDS);
+        return ResponseEntity.ok(new PagedModel<>(subscriptionService.getMySubscriptions(currentUserId(jwt), pageable)));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SubscriptionDto> getSubscription(
+            @AuthenticationPrincipal Jwt jwt,
+            Authentication authentication,
+            @PathVariable("id") UUID id
+    ) {
+        return ResponseEntity.ok(subscriptionService.getSubscription(currentUserId(jwt), id, isAdmin(authentication)));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<SubscriptionDto> cancelSubscription(
+            @AuthenticationPrincipal Jwt jwt,
+            Authentication authentication,
+            @PathVariable("id") UUID id,
+            @RequestParam(name = "immediate", defaultValue = "false") boolean immediate
+    ) {
+        return ResponseEntity.ok(
+                subscriptionService.cancelSubscription(currentUserId(jwt), id, immediate, isAdmin(authentication))
+        );
+    }
+
+    private UUID currentUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\dto\ChargeDto.java ===
+package io.cvvexxx.services.subscription.dto;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record ChargeDto(
+        UUID transactionId,
+        BigDecimal balanceAfter,
+        Instant createdAt
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\dto\CreateChargeDto.java ===
+package io.cvvexxx.services.subscription.dto;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record CreateChargeDto(
+        UUID userId,
+        BigDecimal amount,
+        String idempotencyKey,
+        String description
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\dto\CreateSubscriptionDto.java ===
+package io.cvvexxx.services.subscription.dto;
+
+import jakarta.validation.constraints.NotNull;
+
+import java.util.UUID;
+
+public record CreateSubscriptionDto(
+        @NotNull(message = "{validation.subscription-create.tariff-id.required}")
+        UUID tariffId
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\dto\SubscriptionDto.java ===
+package io.cvvexxx.services.subscription.dto;
+
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record SubscriptionDto(
+        UUID id,
+        UUID userId,
+        UUID tariffId,
+        String tariffName,
+        TariffCategory tariffCategory,
+        SubscriptionStatus status,
+        BigDecimal price,
+        String currency,
+        BillingPeriod billingPeriod,
+        Instant currentPeriodStart,
+        Instant nextChargeAt,
+        boolean cancelAtPeriodEnd,
+        Instant canceledAt,
+        UUID lastChargeTransactionId,
+        Instant createdAt
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\entity\Subscription.java ===
+package io.cvvexxx.services.subscription.entity;
+
+import io.cvvexxx.services.tariff.entity.Tariff;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table(name = "subscriptions")
+public class Subscription {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private UUID userId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tariff_id", nullable = false, updatable = false)
+    private Tariff tariff;
+
+    @Column(nullable = false, length = 32)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
+
+    @Column(nullable = false, precision = 19, scale = 2, updatable = false)
+    private BigDecimal price;
+
+    @Column(nullable = false, length = 3, updatable = false)
+    @Builder.Default
+    private String currency = "RUB";
+
+    @Column(name = "current_period_start", nullable = false)
+    private Instant currentPeriodStart;
+
+    @Column(name = "next_charge_at", nullable = false)
+    private Instant nextChargeAt;
+
+    @Column(name = "cancel_at_period_end", nullable = false)
+    @Builder.Default
+    private boolean cancelAtPeriodEnd = false;
+
+    @Column(name = "canceled_at")
+    private Instant canceledAt;
+
+    //Пока не истёк, джоба списаний подписку не берёт: другой инстанс уже списывает или ждём после отказа billing
+    @Column(name = "charge_locked_until")
+    private Instant chargeLockedUntil;
+
+    //Id CHARGE-транзакции в billing за последний оплаченный период
+    //При создании null до первого списания
+    @Column(name = "last_charge_transaction_id")
+    private UUID lastChargeTransactionId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
+    private Instant updatedAt;
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\entity\SubscriptionStatus.java ===
+package io.cvvexxx.services.subscription.entity;
+
+public enum SubscriptionStatus {
+    ACTIVE,
+    SUSPENDED,
+    CANCELED
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\exception\ChargeDeclinedException.java ===
+package io.cvvexxx.services.subscription.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+public class ChargeDeclinedException extends LocalizedException {
+    public ChargeDeclinedException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\exception\SubscriptionAlreadyCanceledException.java ===
+package io.cvvexxx.services.subscription.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+import java.util.UUID;
+
+public class SubscriptionAlreadyCanceledException extends LocalizedException {
+    public SubscriptionAlreadyCanceledException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\exception\SubscriptionAlreadyExistsException.java ===
+package io.cvvexxx.services.subscription.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+import java.util.UUID;
+
+public class SubscriptionAlreadyExistsException extends LocalizedException {
+    public SubscriptionAlreadyExistsException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\exception\SubscriptionNotFoundException.java ===
+package io.cvvexxx.services.subscription.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+import java.util.UUID;
+
+public class SubscriptionNotFoundException extends LocalizedException {
+    public SubscriptionNotFoundException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\exception\TariffInactiveException.java ===
+package io.cvvexxx.services.subscription.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+import java.util.UUID;
+
+public class TariffInactiveException extends LocalizedException {
+    public TariffInactiveException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\job\SubscriptionChargingJob.java ===
+package io.cvvexxx.services.subscription.job;
+
+import io.cvvexxx.services.client.BillingServiceRestClient;
+import io.cvvexxx.services.client.ChargeOutcome;
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository.DueSubscription;
+import io.cvvexxx.services.subscription.service.SubscriptionChargeService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.UUID;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class SubscriptionChargingJob {
+    private static final int BATCH_SIZE = 100;
+
+    @Value("${app.subscription.lease-ttl:2000}")
+    private long leaseTtl;
+
+    //Интервал ретраев после отказа billing растёт вместе с просрочкой: от min до max
+    @Value("${app.subscription.charge-retry-min-delay:PT1H}")
+    private Duration minRetryDelay;
+
+    @Value("${app.subscription.charge-retry-max-delay:PT24H}")
+    private Duration maxRetryDelay;
+
+    //Сколько приостановленная подписка ждёт оплату, потом отменяем её и больше не ходим в billing
+    @Value("${app.subscription.grace-period:P30D}")
+    private Duration gracePeriod;
+
+    private final BillingServiceRestClient restClient;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionChargeService subscriptionChargeService;
+
+
+    @Scheduled(fixedDelayString = "${app.subscription.charge-interval:PT1M}")
+    public void chargeDueSubscriptions() {
+        List<DueSubscription> batch;
+        do {
+            Instant now = Instant.now();
+            //Берем подписки которые скоро нужно оплатить
+            batch = subscriptionRepository.claimDueForCharge(now, now.plus(Duration.ofMillis(leaseTtl)), BATCH_SIZE);
+            for (DueSubscription s : batch) {
+                try {
+                    //По одной пытаемся обработать
+                    process(s, now);
+                } catch (Exception e) {
+                    log.error("Не удалось списать по подписке {}", s.getId(), e);
+                }
+            }
+        } while (batch.size() == BATCH_SIZE);
+    }
+
+
+    private void process(DueSubscription subscription, Instant now) {
+        UUID id = subscription.getId();
+        Instant claimedNextChargeAt = subscription.getNextChargeAt();
+
+        if (subscription.getCancelAtPeriodEnd()) {
+            subscriptionChargeService.markCanceled(id, claimedNextChargeAt, now);
+            return;
+        }
+
+        //Проверка сколько уже не оплачена подписка(now - nextChargeAt), если больше gracePeriod то отменяем
+        //Чтобы не ходить в billing service и не нагружать его просто так
+        //TODO(В будущем добавить эндпоинт/кафку чтобы при пополнении баланса сервис услуг пытался списать деньги)
+        Duration overdue = Duration.between(claimedNextChargeAt, now);
+        if (subscription.getStatus() == SubscriptionStatus.SUSPENDED && overdue.compareTo(gracePeriod) > 0) {
+            log.info("Подписка {} не оплачена дольше {}, отменяем", id, gracePeriod);
+            subscriptionChargeService.markCanceled(id, claimedNextChargeAt, now);
+            return;
+        }
+
+        ChargeOutcome outcome = restClient.createCharge(new CreateChargeDto(
+                subscription.getUserId(),
+                subscription.getPrice(),
+                idempotencyKey(subscription),
+                "Оплата тарифа " + subscription.getTariffName()
+        ));
+
+        switch (outcome) {
+            case ChargeOutcome.Charged charged -> {
+                //Приостановленную подписку оплатили только сейчас: новый период считаем от оплаты, а не от пропущенной даты
+                Instant periodStart = subscription.getStatus() == SubscriptionStatus.SUSPENDED ? now : claimedNextChargeAt;
+                //TODO(исправить если появятся подписки у которых оплата не раз в месяц)
+                Instant nextChargeAt = periodStart.atOffset(ZoneOffset.UTC).plusMonths(1).toInstant();
+                if (
+                        !subscriptionChargeService.markCharged(id, claimedNextChargeAt, periodStart, nextChargeAt,
+                                charged.transactionId())
+                ) {
+                    //подписку могли отменить пока мы пытались списать деньги, по факту пользователь
+                    //заплатил за период отмененной подписки
+                    //TODO(сделать возврат через billing, когда появится refund для charge)
+                    log.warn("Списали {} по подписке {}, но результат не применён: подписку отменили или уже продлили. Транзакция {}",
+                            subscription.getPrice(), id, charged.transactionId());
+                }
+            }
+            //Не хватило денег, аккаунт не найден/заблокирован
+            case ChargeOutcome.Declined declined -> {
+                log.info("billing отказал в списании по подписке {}: {}", id, declined.code());
+                //Растущий delay чтобы часто не нагружать billing service
+                Duration retryDelay = Duration.ofSeconds(
+                        Math.clamp(overdue.toSeconds(), minRetryDelay.toSeconds(), maxRetryDelay.toSeconds()));
+                subscriptionChargeService.markSuspended(id, claimedNextChargeAt, now.plus(retryDelay));
+            }
+            //Аккаунт закрыт -> отменяем подписку
+            case ChargeOutcome.AccountClosed ignored ->
+                    subscriptionChargeService.markCanceled(id, claimedNextChargeAt, now);
+        }
+    }
+
+
+    private static String idempotencyKey(DueSubscription subscription) {
+        return subscription.getId() + ":" + subscription.getNextChargeAt().getEpochSecond();
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\repository\SubscriptionRepository.java ===
+package io.cvvexxx.services.subscription.repository;
+
+import io.cvvexxx.services.subscription.entity.Subscription;
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
+
+    @EntityGraph(attributePaths = "tariff")
+    Page<Subscription> findByUserId(UUID userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "tariff")
+    Page<Subscription> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "tariff")
+    Optional<Subscription> findByIdAndUserId(UUID id, UUID userId);
+
+    @EntityGraph(attributePaths = "tariff")
+    Optional<Subscription> findWithTariffById(UUID id);
+
+    boolean existsByUserIdAndTariffIdAndStatusIn(
+            UUID userId, UUID tariffId, Collection<SubscriptionStatus> statuses
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Subscription s join fetch s.tariff where s.id = :id")
+    Optional<Subscription> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Subscription s join fetch s.tariff where s.id = :id and s.userId = :userId")
+    Optional<Subscription> findByIdAndUserIdForUpdate(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    @Modifying
+    @Query(value = """
+            insert into subscriptions (id, user_id, tariff_id, status, price, currency,
+                                       current_period_start, next_charge_at, charge_locked_until)
+            values (:id, :userId, :tariffId, 'ACTIVE', :price, :currency,
+                    :periodStart, :nextChargeAt, :lockedUntil)
+            on conflict (user_id, tariff_id) where status in ('ACTIVE', 'SUSPENDED') do nothing
+            """, nativeQuery = true)
+    int insertActiveIfAbsent(
+            @Param("id") UUID id,
+            @Param("userId") UUID userId,
+            @Param("tariffId") UUID tariffId,
+            @Param("price") BigDecimal price,
+            @Param("currency") String currency,
+            @Param("periodStart") Instant periodStart,
+            @Param("nextChargeAt") Instant nextChargeAt,
+            @Param("lockedUntil") Instant lockedUntil
+    );
+
+    //Забирает пачку подписок к списанию и ставит lease одним запросом. Строки блокируются только на время запроса:
+    //skip locked - параллельные инстансы берут разные подписки, lease - пока идёт HTTP в billing, подписку никто не возьмёт
+    @Transactional
+    @Modifying
+    @Query(value = """
+            update subscriptions s
+            set charge_locked_until = :lockedUntil
+            from tariffs t
+            where t.id = s.tariff_id
+              and s.id in (
+                select id from subscriptions
+                where status in ('ACTIVE', 'SUSPENDED')
+                  and next_charge_at <= :now
+                  and (charge_locked_until is null or charge_locked_until <= :now)
+                order by next_charge_at
+                limit :batchSize
+                for update skip locked
+              )
+            returning s.id as id, s.user_id as userId, s.price as price, s.status as status,
+                      s.next_charge_at as nextChargeAt, s.cancel_at_period_end as cancelAtPeriodEnd,
+                      t.name as tariffName
+            """, nativeQuery = true)
+    List<DueSubscription> claimDueForCharge(@Param("now") Instant now, @Param("lockedUntil") Instant lockedUntil,
+                                            @Param("batchSize") int batchSize);
+
+    interface DueSubscription {
+        UUID getId();
+
+        UUID getUserId();
+
+        BigDecimal getPrice();
+
+        SubscriptionStatus getStatus();
+
+        Instant getNextChargeAt();
+
+        boolean getCancelAtPeriodEnd();
+
+        String getTariffName();
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\service\SubscriptionChargeService.java ===
+package io.cvvexxx.services.subscription.service;
+
+import io.cvvexxx.services.subscription.entity.Subscription;
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+//Записывает результат списания после ответа billing. Каждый метод - короткая транзакция без HTTP внутри,
+//save не нужен, Hibernate сам сохранит изменения при коммите.
+//false - подписку уже продлили или отменили (запоздавший ответ billing после истечения lease), ничего не меняем
+@Service
+@RequiredArgsConstructor
+public class SubscriptionChargeService {
+
+    private final SubscriptionRepository subscriptionRepository;
+
+    //billing списал деньги: продлеваем период и снимаем lease
+    @Transactional
+    public boolean markCharged(UUID id, Instant claimedNextChargeAt, Instant periodStart, Instant nextChargeAt,
+                               UUID transactionId) {
+        return findClaimed(id, claimedNextChargeAt).map(subscription -> {
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+            subscription.setCurrentPeriodStart(periodStart);
+            subscription.setNextChargeAt(nextChargeAt);
+            subscription.setLastChargeTransactionId(transactionId);
+            subscription.setChargeLockedUntil(null);
+            return true;
+        }).orElse(false);
+    }
+
+    //billing отказал (нет денег, счёт заблокирован, нет счёта): приостанавливаем до retryAt
+    @Transactional
+    public boolean markSuspended(UUID id, Instant claimedNextChargeAt, Instant retryAt) {
+        return findClaimed(id, claimedNextChargeAt).map(subscription -> {
+            subscription.setStatus(SubscriptionStatus.SUSPENDED);
+            subscription.setChargeLockedUntil(retryAt);
+            return true;
+        }).orElse(false);
+    }
+
+    //Отмена в конце периода или закрытый счёт в billing
+    @Transactional
+    public boolean markCanceled(UUID id, Instant claimedNextChargeAt, Instant now) {
+        return findClaimed(id, claimedNextChargeAt).map(subscription -> {
+            subscription.setStatus(SubscriptionStatus.CANCELED);
+            subscription.setCanceledAt(now);
+            subscription.setChargeLockedUntil(null);
+            return true;
+        }).orElse(false);
+    }
+
+    //Подписка всё ещё та, что взяли в claim: не отменена и next_charge_at не сдвинули
+    private Optional<Subscription> findClaimed(UUID id, Instant claimedNextChargeAt) {
+        return subscriptionRepository.findByIdForUpdate(id)
+                .filter(subscription -> subscription.getStatus() != SubscriptionStatus.CANCELED
+                        && subscription.getNextChargeAt().equals(claimedNextChargeAt));
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\subscription\service\SubscriptionService.java ===
+package io.cvvexxx.services.subscription.service;
+
+import io.cvvexxx.services.client.BillingServiceRestClient;
+import io.cvvexxx.services.client.ChargeOutcome;
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+import io.cvvexxx.services.subscription.dto.SubscriptionDto;
+import io.cvvexxx.services.subscription.entity.Subscription;
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.subscription.exception.*;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository;
+import io.cvvexxx.services.tariff.entity.Tariff;
+import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
+import io.cvvexxx.services.tariff.repository.TariffRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SubscriptionService {
+
+    @Value("${app.subscription.lease-ttl:300000}")
+    private long leaseTtl;
+
+    private final SubscriptionRepository subscriptionRepository;
+    private final TariffRepository tariffRepository;
+    private final TransactionTemplate transactionTemplate;
+    private final BillingServiceRestClient billingClient;
+
+    public SubscriptionDto subscribe(UUID userId, UUID tariffId) {
+        UUID subscriptionId = UUID.randomUUID();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        Instant nextChargeAt = now.atOffset(ZoneOffset.UTC).plusMonths(1).toInstant();
+        Instant lockedUntil = now.plus(Duration.ofMillis(leaseTtl));
+
+        //резервация активной подписки в БД
+        Tariff tariff = transactionTemplate.execute(status -> {
+            Tariff found = tariffRepository.findById(tariffId)
+                    .orElseThrow(() -> new TariffNotFoundException("tariff.not-found", tariffId));
+            if (!found.isActive()) {
+                throw new TariffInactiveException("tariff.inactive", tariffId);
+            }
+
+            int inserted = subscriptionRepository.insertActiveIfAbsent(
+                    subscriptionId,
+                    userId,
+                    tariffId,
+                    found.getPrice(),
+                    found.getCurrency(),
+                    now,
+                    nextChargeAt,
+                    lockedUntil
+            );
+            if (inserted == 0) {
+                throw new SubscriptionAlreadyExistsException("subscription.already-exists", tariffId);
+            }
+            return found;
+        });
+
+        //списание
+        ChargeOutcome outcome;
+        try {
+            outcome = billingClient.createCharge(new CreateChargeDto(
+                    userId,
+                    tariff.getPrice(),
+                    subscriptionId + ":" + now.getEpochSecond(),
+                    "Оплата тарифа " + tariff.getName()
+            ));
+        } catch (RuntimeException e) {
+            transactionTemplate.executeWithoutResult(status -> subscriptionRepository.deleteById(subscriptionId));
+            throw e;
+        }
+
+        //сохраняем транзакцию или удаляем черновик при отказе
+        return switch (outcome) {
+            case ChargeOutcome.Charged charged -> transactionTemplate.execute(status -> {
+                Subscription subscription = subscriptionRepository.findByIdForUpdate(subscriptionId)
+                        .orElseThrow(() -> new SubscriptionNotFoundException("subscription.not-found", subscriptionId));
+                subscription.setLastChargeTransactionId(charged.transactionId());
+                subscription.setChargeLockedUntil(null);
+                return toDto(subscription);
+            });
+            case ChargeOutcome.Declined declined -> {
+                transactionTemplate.executeWithoutResult(status -> subscriptionRepository.deleteById(subscriptionId));
+                throw new ChargeDeclinedException(declined.code(), userId);
+            }
+            case ChargeOutcome.AccountClosed ignored -> {
+                transactionTemplate.executeWithoutResult(status -> subscriptionRepository.deleteById(subscriptionId));
+                throw new ChargeDeclinedException("charge.account-closed", userId);
+            }
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SubscriptionDto> getMySubscriptions(UUID userId, Pageable pageable) {
+        return subscriptionRepository.findByUserId(userId, pageable).map(this::toDto);
+    }
+
+
+    @Transactional(readOnly = true)
+    public SubscriptionDto getSubscription(UUID userId, UUID subscriptionId, boolean isAdmin) {
+        Subscription subscription = (isAdmin
+                ? subscriptionRepository.findWithTariffById(subscriptionId)
+                : subscriptionRepository.findByIdAndUserId(subscriptionId, userId))
+                .orElseThrow(() -> new SubscriptionNotFoundException("subscription.not-found", subscriptionId));
+        return toDto(subscription);
+    }
+
+    @Transactional
+    public SubscriptionDto cancelSubscription(UUID userId, UUID subscriptionId, boolean immediate, boolean isAdmin) {
+        Subscription subscription = (isAdmin
+                ? subscriptionRepository.findByIdForUpdate(subscriptionId)
+                : subscriptionRepository.findByIdAndUserIdForUpdate(subscriptionId, userId))
+                .orElseThrow(() -> new SubscriptionNotFoundException("subscription.not-found", subscriptionId));
+
+        if (subscription.getStatus() == SubscriptionStatus.CANCELED) {
+            throw new SubscriptionAlreadyCanceledException("subscription.already-canceled", subscriptionId);
+        }
+
+        if (immediate || subscription.getStatus() == SubscriptionStatus.SUSPENDED) {
+            subscription.setStatus(SubscriptionStatus.CANCELED);
+            subscription.setCanceledAt(Instant.now());
+            subscription.setCancelAtPeriodEnd(false);
+            subscription.setChargeLockedUntil(null);
+        } else {
+            subscription.setCancelAtPeriodEnd(true);
+        }
+
+        return toDto(subscription);
+    }
+
+
+    private SubscriptionDto toDto(Subscription s) {
+        Tariff tariff = s.getTariff();
+        return new SubscriptionDto(
+                s.getId(),
+                s.getUserId(),
+                tariff.getId(),
+                tariff.getName(),
+                tariff.getCategory(),
+                s.getStatus(),
+                s.getPrice(),
+                s.getCurrency(),
+                tariff.getBillingPeriod(),
+                s.getCurrentPeriodStart(),
+                s.getNextChargeAt(),
+                s.isCancelAtPeriodEnd(),
+                s.getCanceledAt(),
+                s.getLastChargeTransactionId(),
+                s.getCreatedAt()
+        );
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\controller\TariffController.java ===
+package io.cvvexxx.services.tariff.controller;
+
+import io.cvvexxx.services.advice.InvalidSortException;
+import io.cvvexxx.services.tariff.dto.CreateTariffDto;
+import io.cvvexxx.services.tariff.dto.TariffDto;
+import io.cvvexxx.services.tariff.dto.UpdateTariffDto;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.service.TariffService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/services/tariffs")
+public class TariffController {
+
+    private static final Set<String> SORT_FIELDS = Set.of("createdAt", "price", "name", "category");
+
+    private final TariffService tariffService;
+
+    @GetMapping
+    public ResponseEntity<PagedModel<TariffDto>> getActiveTariffs(
+            @RequestParam(name = "category", required = false) TariffCategory category,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        InvalidSortException.requireAllowed(pageable, SORT_FIELDS);
+        return ResponseEntity.ok(new PagedModel<>(tariffService.getActiveTariffs(category, pageable)));
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedModel<TariffDto>> getAllTariffs(
+            @RequestParam(name = "category", required = false) TariffCategory category,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        InvalidSortException.requireAllowed(pageable, SORT_FIELDS);
+        return ResponseEntity.ok(new PagedModel<>(tariffService.getAllTariffs(category, pageable)));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TariffDto> getTariff(
+            @PathVariable("id") UUID id,
+            Authentication authentication
+    ) {
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(tariffService.getTariffById(id, isAdmin));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffDto> createTariff(@RequestBody @Valid CreateTariffDto createTariffDto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tariffService.createTariff(createTariffDto));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffDto> updateTariff(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid UpdateTariffDto updateTariffDto
+    ) {
+        return ResponseEntity.ok(tariffService.updateTariff(id, updateTariffDto));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffDto> archiveTariff(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(tariffService.archiveTariff(id));
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\dto\CreateTariffDto.java ===
+package io.cvvexxx.services.tariff.dto;
+
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
+
+public record CreateTariffDto(
+        @NotBlank(message = "{validation.tariff-create.name.required}")
+        @Size(max = 100, message = "{validation.tariff-create.name.too-long}")
+        String name,
+
+        @Size(max = 500, message = "{validation.tariff-create.description.too-long}")
+        String description,
+
+        @NotNull(message = "{validation.tariff-create.category.required}")
+        TariffCategory category,
+
+        @NotNull(message = "{validation.tariff-create.price.required}")
+        @Positive(message = "{validation.tariff-create.price.positive}")
+        @Digits(integer = 17, fraction = 2, message = "{validation.tariff-create.price.digits}")
+        BigDecimal price,
+
+        BillingPeriod billingPeriod
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\dto\TariffDto.java ===
+package io.cvvexxx.services.tariff.dto;
+
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record TariffDto(
+        UUID id,
+        String name,
+        String description,
+        TariffCategory category,
+        BigDecimal price,
+        String currency,
+        BillingPeriod billingPeriod,
+        boolean active,
+        Instant createdAt
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\dto\UpdateTariffDto.java ===
+package io.cvvexxx.services.tariff.dto;
+
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
+
+public record UpdateTariffDto(
+        @Pattern(regexp = ".*\\S.*", message = "{validation.tariff-update.name.not-blank}")
+        @Size(max = 100, message = "{validation.tariff-update.name.too-long}")
+        String name,
+
+        @Size(max = 500, message = "{validation.tariff-update.description.too-long}")
+        String description,
+
+        TariffCategory category,
+
+        @Positive(message = "{validation.tariff-update.price.positive}")
+        @Digits(integer = 17, fraction = 2, message = "{validation.tariff-update.price.digits}")
+        BigDecimal price,
+
+        Boolean active
+) {
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\entity\BillingPeriod.java ===
+package io.cvvexxx.services.tariff.entity;
+
+public enum BillingPeriod {
+    MONTH
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\entity\Tariff.java ===
+package io.cvvexxx.services.tariff.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table(name = "tariffs")
+public class Tariff {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(length = 500)
+    private String description;
+
+    @Column(nullable = false, length = 32)
+    @Enumerated(EnumType.STRING)
+    private TariffCategory category;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false, length = 3)
+    @Builder.Default
+    private String currency = "RUB";
+
+    @Column(name = "billing_period", nullable = false, length = 32)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private BillingPeriod billingPeriod = BillingPeriod.MONTH;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
+    private Instant updatedAt;
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\entity\TariffCategory.java ===
+package io.cvvexxx.services.tariff.entity;
+
+public enum TariffCategory {
+    INTERNET,
+    TV,
+    MOBILE
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\exception\TariffAlreadyExistsException.java ===
+package io.cvvexxx.services.tariff.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+public class TariffAlreadyExistsException extends LocalizedException {
+    public TariffAlreadyExistsException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\exception\TariffNotFoundException.java ===
+package io.cvvexxx.services.tariff.exception;
+
+import io.cvvexxx.services.advice.LocalizedException;
+
+public class TariffNotFoundException extends LocalizedException {
+    public TariffNotFoundException(String messageCode, Object... args) {
+        super(messageCode, args);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\repository\TariffRepository.java ===
+package io.cvvexxx.services.tariff.repository;
+
+import io.cvvexxx.services.tariff.entity.Tariff;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface TariffRepository extends JpaRepository<Tariff, UUID> {
+
+    Page<Tariff> findByActiveTrue(Pageable pageable);
+
+    Page<Tariff> findByActiveTrueAndCategory(TariffCategory category, Pageable pageable);
+
+    Page<Tariff> findByCategory(TariffCategory category, Pageable pageable);
+
+    Optional<Tariff> findByIdAndActiveTrue(UUID id);
+
+    Optional<Tariff> findByName(String name);
+
+    boolean existsByNameAndIdNot(String name, UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Tariff t where t.id = :id")
+    Optional<Tariff> findByIdForUpdate(@Param("id") UUID id);
+
+    @Modifying
+    @Query(value = """
+            insert into tariffs (id, name, description, category, price, currency, billing_period, active)
+            values (gen_random_uuid(), :name, :description, :category, :price, 'RUB', :billingPeriod, true)
+            on conflict (name) do nothing
+            """, nativeQuery = true)
+    int insertIfAbsent(
+            @Param("name") String name,
+            @Param("description") String description,
+            @Param("category") String category,
+            @Param("price") BigDecimal price,
+            @Param("billingPeriod") String billingPeriod
+    );
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\java\io\cvvexxx\services\tariff\service\TariffService.java ===
+package io.cvvexxx.services.tariff.service;
+
+import io.cvvexxx.services.tariff.dto.CreateTariffDto;
+import io.cvvexxx.services.tariff.dto.TariffDto;
+import io.cvvexxx.services.tariff.dto.UpdateTariffDto;
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.Tariff;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.exception.TariffAlreadyExistsException;
+import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
+import io.cvvexxx.services.tariff.repository.TariffRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class TariffService {
+
+    private final TariffRepository tariffRepository;
+
+    @Transactional(readOnly = true)
+    public Page<TariffDto> getActiveTariffs(TariffCategory category, Pageable pageable) {
+        Page<Tariff> tariffs = category == null
+                ? tariffRepository.findByActiveTrue(pageable)
+                : tariffRepository.findByActiveTrueAndCategory(category, pageable);
+
+        return tariffs.map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TariffDto> getAllTariffs(TariffCategory category, Pageable pageable) {
+        Page<Tariff> tariffs = category == null
+                ? tariffRepository.findAll(pageable)
+                : tariffRepository.findByCategory(category, pageable);
+
+        return tariffs.map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public TariffDto getTariffById(UUID id, boolean isAdmin) {
+        Tariff tariff = (isAdmin
+                ? tariffRepository.findById(id)
+                : tariffRepository.findByIdAndActiveTrue(id))
+                .orElseThrow(() -> new TariffNotFoundException("tariff.not-found", id));
+        return toDto(tariff);
+    }
+
+    @Transactional
+    public TariffDto createTariff(CreateTariffDto dto) {
+        String name = dto.name().trim();
+        String description = dto.description() != null ? dto.description().trim() : null;
+        BillingPeriod period = dto.billingPeriod() != null ? dto.billingPeriod() : BillingPeriod.MONTH;
+
+        if (tariffRepository.insertIfAbsent(name, description, dto.category().name(), dto.price(), period.name()) == 0) {
+            throw new TariffAlreadyExistsException("tariff.already-exists", name);
+        }
+
+        Tariff saved = tariffRepository.findByName(name)
+                .orElseThrow(() -> new TariffNotFoundException("tariff.not-found-by-name", name));
+        return toDto(saved);
+    }
+
+    @Transactional
+    public TariffDto updateTariff(UUID id, UpdateTariffDto dto) {
+        Tariff tariff = findTariffForUpdate(id);
+
+        if (dto.name() != null) {
+            String newName = dto.name().trim();
+            if (tariffRepository.existsByNameAndIdNot(newName, id)) {
+                throw new TariffAlreadyExistsException("tariff.already-exists", newName);
+            }
+            tariff.setName(newName);
+        }
+        if (dto.description() != null) {
+            tariff.setDescription(dto.description().trim());
+        }
+        if (dto.category() != null) {
+            tariff.setCategory(dto.category());
+        }
+        if (dto.price() != null) {
+            tariff.setPrice(dto.price());
+        }
+        if (dto.active() != null) {
+            tariff.setActive(dto.active());
+        }
+
+        return toDto(tariff);
+    }
+
+    @Transactional
+    public TariffDto archiveTariff(UUID id) {
+        Tariff tariff = findTariffForUpdate(id);
+        tariff.setActive(false);
+        return toDto(tariff);
+    }
+
+    private Tariff findTariffForUpdate(UUID id) {
+        return tariffRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new TariffNotFoundException("tariff.not-found", id));
+    }
+
+    private TariffDto toDto(Tariff tariff) {
+        return new TariffDto(
+                tariff.getId(),
+                tariff.getName(),
+                tariff.getDescription(),
+                tariff.getCategory(),
+                tariff.getPrice(),
+                tariff.getCurrency(),
+                tariff.getBillingPeriod(),
+                tariff.isActive(),
+                tariff.getCreatedAt()
+        );
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\application-dev.properties ===
+spring.application.name=services-service
+server.port=8083
+
+USER_SERVICE_URI=http://localhost:8081
+BILLING_SERVICE_URI=http://localhost:8082
+JWT_ISSUER=http://localhost:8081
+JWT_AUDIENCE=rostelekom
+
+spring.datasource.url=jdbc:postgresql://${SERVICES_DB_HOST:localhost}:${SERVICES_DB_PORT:55434}/${SERVICES_DB_NAME:services}
+spring.datasource.username=${SERVICES_DB_USER:user}
+spring.datasource.password=${SERVICES_DB_PASSWORD:12341234}
+
+spring.config.import=optional:file:.env.dev[.properties],optional:file:../.env.dev[.properties]
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.locations=classpath:db/migration
+app.subscription.charge-interval=PT1M
+app.subscription.lease-ttl=2000
+app.subscription.charge-retry-min-delay=PT1H
+app.subscription.charge-retry-max-delay=PT24H
+app.subscription.grace-period=P30D
+
+logging.level.org.springframework.security=DEBUG
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\application.properties ===
+spring.application.name=services-service
+
+# Добавлены дефолтные значения через двоеточие, чтобы контекст не падал
+rostelekom.uri.user-service=${USER_SERVICE_URI:http://localhost:8081}
+rostelekom.uri.billing-service=${BILLING_SERVICE_URI:http://localhost:8082}
+
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${rostelekom.uri.user-service}/.well-known/jwks.json
+spring.security.oauth2.resourceserver.jwt.issuer-uri=${JWT_ISSUER:http://localhost:8081}
+spring.security.oauth2.resourceserver.jwt.audiences=${JWT_AUDIENCE:rostelekom}
+
+spring.threads.virtual.enabled=true
+
+app.scheduling.enabled=true
+
+app.subscription.charge-interval=PT1M
+app.subscription.lease-ttl=300000
+app.subscription.charge-retry-min-delay=PT1H
+app.subscription.charge-retry-max-delay=PT24H
+app.subscription.grace-period=P30D
+
+app.service-auth.client-id=services-service
+app.service-auth.client-secret=${SERVICES_SERVICE_SECRET:secret}
+
+spring.http.clients.connect-timeout=2s
+spring.http.clients.read-timeout=5s
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\messages.properties ===
+error.unauthorized=Access-токен отсутствует, истёк или недействителен
+error.forbidden=Недостаточно прав для доступа к ресурсу
+error.internal=Внутренняя ошибка сервера, попробуйте позже
+error.validation-failed=Ошибка валидации
+error.invalid-sort=Сортировка по полю {0} недоступна, доступные поля: {1}
+
+tariff.not-found=Тариф с id {0} не найден
+tariff.not-found-by-name=Тариф с названием {0} не найден
+tariff.already-exists=Тариф с названием {0} уже существует
+tariff.inactive=Тариф с id {0} находится в архиве и недоступен для подключения
+
+subscription.not-found=Подписка с id {0} не найдена
+subscription.already-exists=Подписка на тариф {0} уже подключена
+subscription.already-canceled=Подписка с id {0} уже отменена
+
+account.not-found-by-user=Счёт пользователя {0} не найден
+charge.account-closed=Нельзя списать деньги: счёт пользователя {0} закрыт
+charge.account-blocked=Нельзя списать деньги: счёт пользователя {0} заблокирован
+charge.insufficient-funds=На балансе пользователя {0} не хватает денег для подключения тарифа
+
+validation.tariff-create.name.required=Название тарифа обязательно
+validation.tariff-create.name.too-long=Название тарифа должно быть не длиннее {max} символов
+validation.tariff-create.description.too-long=Описание тарифа должно быть не длиннее {max} символов
+validation.tariff-create.category.required=Категория тарифа обязательна
+validation.tariff-create.price.required=Стоимость тарифа обязательна
+validation.tariff-create.price.positive=Стоимость тарифа должна быть больше нуля
+validation.tariff-create.price.digits=Стоимость тарифа должна содержать не больше {integer} цифр в целой части и {fraction} после запятой
+
+validation.tariff-update.name.not-blank=Название тарифа не может быть пустым
+validation.tariff-update.name.too-long=Название тарифа должно быть не длиннее {max} символов
+validation.tariff-update.description.too-long=Описание тарифа должно быть не длиннее {max} символов
+validation.tariff-update.price.positive=Стоимость тарифа должна быть больше нуля
+validation.tariff-update.price.digits=Стоимость тарифа должна содержать не больше {integer} цифр в целой части и {fraction} после запятой
+
+validation.subscription-create.tariff-id.required=Id тарифа обязателен
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\db\migration\V1__tariffs.sql ===
+CREATE TABLE tariffs
+(
+    id             UUID                     NOT NULL,
+    name           VARCHAR(100)             NOT NULL,
+    description    VARCHAR(500),
+    category       VARCHAR(32)              NOT NULL,
+    price          DECIMAL(19, 2)           NOT NULL,
+    currency       VARCHAR(3)               NOT NULL DEFAULT 'RUB',
+    billing_period VARCHAR(32)              NOT NULL DEFAULT 'MONTH',
+    active         BOOLEAN                  NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pk_tariffs PRIMARY KEY (id),
+    CONSTRAINT ck_tariffs_category CHECK (category IN ('INTERNET', 'TV', 'MOBILE')),
+    CONSTRAINT ck_tariffs_billing_period CHECK (billing_period IN ('MONTH')),
+    CONSTRAINT ck_tariffs_price_positive CHECK (price > 0)
+);
+
+CREATE INDEX idx_tariffs_active_category ON tariffs (active, category);
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\db\migration\V2__subscriptions.sql ===
+CREATE TABLE subscriptions
+(
+    id                   UUID                     NOT NULL,
+    user_id              UUID                     NOT NULL,
+    tariff_id            UUID                     NOT NULL REFERENCES tariffs (id),
+    status               VARCHAR(32)              NOT NULL DEFAULT 'ACTIVE',
+    price                DECIMAL(19, 2)           NOT NULL,
+    currency             VARCHAR(3)               NOT NULL DEFAULT 'RUB',
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    next_charge_at       TIMESTAMP WITH TIME ZONE NOT NULL,
+    cancel_at_period_end BOOLEAN                  NOT NULL DEFAULT FALSE,
+    canceled_at          TIMESTAMP WITH TIME ZONE,
+    created_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pk_subscriptions PRIMARY KEY (id),
+    CONSTRAINT ck_subscriptions_status CHECK (status IN ('ACTIVE', 'SUSPENDED', 'CANCELED')),
+    CONSTRAINT ck_subscriptions_price_positive CHECK (price > 0)
+);
+
+CREATE UNIQUE INDEX uk_subscriptions_user_active_tariff
+    ON subscriptions (user_id, tariff_id)
+    WHERE status IN ('ACTIVE', 'SUSPENDED');
+
+CREATE INDEX idx_subscriptions_user_id_created_at
+    ON subscriptions (user_id, created_at DESC);
+
+CREATE INDEX idx_subscriptions_due_for_charge
+    ON subscriptions (next_charge_at)
+    WHERE status IN ('ACTIVE', 'SUSPENDED');
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\db\migration\V3__subscription_charging.sql ===
+-- charge_locked_until: lease джобы списаний (пока не истёк, подписку не берёт другой инстанс)
+-- и backoff после отказа billing (нет денег, счёт заблокирован)
+ALTER TABLE subscriptions
+    ADD COLUMN charge_locked_until        TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN last_charge_transaction_id UUID;
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\main\resources\db\migration\V4__tariffs_unique_name_category.sql ===
+ALTER TABLE tariffs
+    ADD CONSTRAINT uk_tariffs_name_category UNIQUE (name);
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\client\BillingServiceRestClientImplTest.java ===
+package io.cvvexxx.services.client;
+
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+
+class BillingServiceRestClientImplTest {
+
+    private static final CreateChargeDto CHARGE =
+            new CreateChargeDto(UUID.randomUUID(), new BigDecimal("499.00"), "sub:1", "Продление тарифа");
+
+    private MockRestServiceServer billing;
+    private BillingServiceRestClient client;
+
+    @BeforeEach
+    void setUp() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://billing");
+        billing = MockRestServiceServer.bindTo(builder).build();
+        client = new BillingServiceRestClientImpl(builder.build());
+    }
+
+    @Test
+    void charged_sendsBodyAndReturnsTransactionId() {
+        UUID transactionId = UUID.randomUUID();
+        billing.expect(requestTo("http://billing/internal/billing/charges"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.idempotencyKey").value("sub:1"))
+                .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON).body("""
+                        {"transactionId": "%s", "balanceAfter": 1.00, "createdAt": "2026-11-01T12:00:00Z"}
+                        """.formatted(transactionId)));
+
+        assertThat(client.createCharge(CHARGE)).isEqualTo(new ChargeOutcome.Charged(transactionId));
+    }
+
+    @Test
+    void businessErrors_mappedByCode() {
+        expectProblem(HttpStatus.CONFLICT, "charge.insufficient-funds");
+        expectProblem(HttpStatus.CONFLICT, "charge.account-blocked");
+        expectProblem(HttpStatus.NOT_FOUND, "account.not-found-by-user");
+        expectProblem(HttpStatus.CONFLICT, "charge.account-closed");
+
+        assertThat(client.createCharge(CHARGE)).isEqualTo(new ChargeOutcome.Declined("charge.insufficient-funds"));
+        assertThat(client.createCharge(CHARGE)).isEqualTo(new ChargeOutcome.Declined("charge.account-blocked"));
+        assertThat(client.createCharge(CHARGE)).isEqualTo(new ChargeOutcome.Declined("account.not-found-by-user"));
+        assertThat(client.createCharge(CHARGE)).isEqualTo(new ChargeOutcome.AccountClosed());
+    }
+
+    @Test
+    void unknownErrors_thrown() {
+        billing.expect(requestTo("http://billing/internal/billing/charges"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));//404 без ProblemDetail - кривой url, а не нет счёта
+        expectProblem(HttpStatus.CONFLICT, "something.new");
+        billing.expect(requestTo("http://billing/internal/billing/charges")).andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.createCharge(CHARGE)).isInstanceOf(HttpClientErrorException.NotFound.class);
+        assertThatThrownBy(() -> client.createCharge(CHARGE)).isInstanceOf(HttpClientErrorException.Conflict.class);
+        assertThatThrownBy(() -> client.createCharge(CHARGE)).isInstanceOf(HttpServerErrorException.class);
+    }
+
+    private void expectProblem(HttpStatus status, String code) {
+        billing.expect(requestTo("http://billing/internal/billing/charges"))
+                .andRespond(withStatus(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body("""
+                        {"type": "about:blank", "status": %d, "detail": "текст", "code": "%s"}
+                        """.formatted(status.value(), code)));
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\client\ServiceTokenInterceptorTest.java ===
+package io.cvvexxx.services.client;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClient;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
+
+class ServiceTokenInterceptorTest {
+
+    @Test
+    @DisplayName("токен берётся один раз и переиспользуется, после 401 запрашивается новый")
+    void cachesTokenAndRefreshesAfterUnauthorized() {
+        RestClient.Builder authBuilder = RestClient.builder();
+        MockRestServiceServer userService = MockRestServiceServer.bindTo(authBuilder).build();
+        ServiceTokenInterceptor interceptor =
+                new ServiceTokenInterceptor(authBuilder, "http://user-service", "services-service", "secret");
+
+        RestClient.Builder billingBuilder = RestClient.builder().requestInterceptor(interceptor);
+        MockRestServiceServer billing = MockRestServiceServer.bindTo(billingBuilder).build();
+        RestClient client = billingBuilder.build();
+
+        expectToken(userService, "t1");
+        expectToken(userService, "t2");
+
+        billing.expect(header("Authorization", "Bearer t1")).andRespond(withSuccess());
+        billing.expect(header("Authorization", "Bearer t1")).andRespond(withSuccess());
+        billing.expect(header("Authorization", "Bearer t1")).andRespond(withUnauthorizedRequest());
+        billing.expect(header("Authorization", "Bearer t2")).andRespond(withSuccess());
+
+        call(client);
+        call(client);
+        assertThatThrownBy(() -> call(client)).isInstanceOf(HttpClientErrorException.Unauthorized.class);
+        call(client);
+
+        userService.verify();
+        billing.verify();
+    }
+
+    private static void expectToken(MockRestServiceServer userService, String token) {
+        userService.expect(requestTo("http://user-service/internal/auth/service-token"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("""
+                        {"accessToken": "%s", "expiresInSeconds": 3600}
+                        """.formatted(token), MediaType.APPLICATION_JSON));
+    }
+
+    private static void call(RestClient client) {
+        client.get().uri("http://billing/any").retrieve().toBodilessEntity();
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\subscription\job\SubscriptionChargingJobIT.java ===
+package io.cvvexxx.services.subscription.job;
+
+import io.cvvexxx.services.client.BillingServiceRestClient;
+import io.cvvexxx.services.client.ChargeOutcome;
+import io.cvvexxx.services.subscription.dto.CreateChargeDto;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.HttpServerErrorException;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+//Джоба берёт Instant.now() сама, поэтому next_charge_at задаём относительно реального времени,
+//а моменты, которые она ставит от now, проверяем попаданием в окно [до запуска, после запуска]
+@SpringBootTest
+@ActiveProfiles("test")
+@Testcontainers
+@EnabledIfDockerAvailable
+class SubscriptionChargingJobIT {
+
+    //Postgres хранит микросекунды, Instant.now() бывает точнее - даём запас на округление
+    private static final Duration TOLERANCE = Duration.ofMillis(1);
+
+    @Container
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
+
+    @DynamicPropertySource
+    static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    }
+
+    @MockitoBean
+    private BillingServiceRestClient billing;
+    @Autowired
+    private SubscriptionChargingJob job;
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private UUID tariffId;
+    private Instant before;
+    private Instant after;
+
+    @BeforeEach
+    void setUp() {
+        jdbc.update("delete from subscriptions");
+        tariffId = jdbc.queryForObject("""
+                insert into tariffs (id, name, category, price) values (gen_random_uuid(), 'Интернет 500', 'INTERNET', 499.00)
+                returning id
+                """, UUID.class);
+    }
+
+    @Test
+    @DisplayName("Charged по ACTIVE: период продлевается от старой даты списания, в billing уходят верные данные")
+    void charged_activeSubscription_extendsFromPreviousChargeDate() {
+        Instant due = Instant.now().minus(Duration.ofMinutes(1)).truncatedTo(ChronoUnit.MILLIS);
+        UUID id = insert("ACTIVE", due, false);
+        UUID userId = userId(id);
+        UUID transactionId = UUID.randomUUID();
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Charged(transactionId));
+
+        runJob();
+
+        verify(billing).createCharge(new CreateChargeDto(
+                userId, new BigDecimal("499.00"), id + ":" + due.getEpochSecond(), "Оплата тарифа Интернет 500"));
+        Map<String, Object> row = row(id);
+        assertThat(row.get("status")).isEqualTo("ACTIVE");
+        assertThat(instant(row, "current_period_start")).isEqualTo(due);
+        assertThat(instant(row, "next_charge_at")).isEqualTo(due.atOffset(ZoneOffset.UTC).plusMonths(1).toInstant());
+        assertThat(row.get("last_charge_transaction_id")).isEqualTo(transactionId);
+        assertThat(row.get("charge_locked_until")).isNull();
+    }
+
+    @Test
+    @DisplayName("Charged по SUSPENDED: новый период считается от момента оплаты, подписка снова ACTIVE")
+    void charged_suspendedSubscription_extendsFromNow() {
+        UUID id = insert("SUSPENDED", Instant.now().minus(Duration.ofDays(3)), false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Charged(UUID.randomUUID()));
+
+        runJob();
+
+        Map<String, Object> row = row(id);
+        Instant periodStart = instant(row, "current_period_start");
+        assertThat(row.get("status")).isEqualTo("ACTIVE");
+        assertThatInWindow(periodStart, Duration.ZERO);
+        assertThat(instant(row, "next_charge_at")).isEqualTo(periodStart.atOffset(ZoneOffset.UTC).plusMonths(1).toInstant());
+    }
+
+    @Test
+    @DisplayName("Declined сразу после даты списания: SUSPENDED, ретрай через минимальный интервал (1 час)")
+    void declined_freshOverdue_retriesAfterMinDelay() {
+        Instant due = Instant.now().minus(Duration.ofMinutes(1));
+        UUID id = insert("ACTIVE", due, false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Declined("charge.insufficient-funds"));
+
+        runJob();
+
+        Map<String, Object> row = row(id);
+        assertThat(row.get("status")).isEqualTo("SUSPENDED");
+        assertThatInWindow(instant(row, "charge_locked_until"), Duration.ofHours(1));
+        //Период не сдвигается: по нему считается просрочка и ключ идемпотентности
+        assertThat(instant(row, "next_charge_at")).isCloseTo(due, within(1, ChronoUnit.MILLIS));
+    }
+
+    @Test
+    @DisplayName("Declined при просрочке в 5 часов: ретрай через время просрочки")
+    void declined_midOverdue_retriesAfterOverdue() {
+        Instant due = Instant.now().minus(Duration.ofHours(5));
+        UUID id = insert("SUSPENDED", due, false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Declined("charge.insufficient-funds"));
+
+        runJob();
+
+        //retryAt = now + (now - due) с отброшенными долями секунды (джоба считает задержку в целых секундах),
+        //окно [before, after] даёт нижнюю и верхнюю границы
+        Instant lockedUntil = instant(row(id), "charge_locked_until");
+        assertThat(lockedUntil).isBetween(
+                before.plusSeconds(Duration.between(due, before).toSeconds()).minus(TOLERANCE),
+                after.plusSeconds(Duration.between(due, after).toSeconds()).plus(TOLERANCE));
+    }
+
+    @Test
+    @DisplayName("Declined при просрочке больше суток: ретрай не реже раза в сутки (максимальный интервал)")
+    void declined_longOverdue_retriesAfterMaxDelay() {
+        UUID id = insert("SUSPENDED", Instant.now().minus(Duration.ofDays(3)), false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Declined("charge.account-blocked"));
+
+        runJob();
+
+        assertThatInWindow(instant(row(id), "charge_locked_until"), Duration.ofHours(24));
+    }
+
+    @Test
+    @DisplayName("AccountClosed: подписка отменяется")
+    void accountClosed_cancelsSubscription() {
+        UUID id = insert("ACTIVE", Instant.now().minus(Duration.ofMinutes(1)), false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.AccountClosed());
+
+        runJob();
+
+        assertCanceled(id);
+    }
+
+    @Test
+    @DisplayName("cancelAtPeriodEnd: подписка отменяется без запроса в billing")
+    void cancelAtPeriodEnd_cancelsWithoutCharge() {
+        UUID id = insert("ACTIVE", Instant.now().minus(Duration.ofMinutes(1)), true);
+
+        runJob();
+
+        verifyNoInteractions(billing);
+        assertCanceled(id);
+    }
+
+    @Test
+    @DisplayName("SUSPENDED дольше грейс-периода: отменяется без запроса в billing")
+    void suspendedPastGracePeriod_cancelsWithoutCharge() {
+        UUID id = insert("SUSPENDED", Instant.now().minus(Duration.ofDays(31)), false);
+
+        runJob();
+
+        verifyNoInteractions(billing);
+        assertCanceled(id);
+    }
+
+    @Test
+    @DisplayName("ACTIVE дольше грейс-периода (лежал сервис) не отменяется, а списывается")
+    void activePastGracePeriod_isStillCharged() {
+        UUID id = insert("ACTIVE", Instant.now().minus(Duration.ofDays(31)), false);
+        when(billing.createCharge(any())).thenReturn(new ChargeOutcome.Charged(UUID.randomUUID()));
+
+        runJob();
+
+        assertThat(row(id).get("status")).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("Ошибка billing по одной подписке: она не меняется и остаётся под lease, остальные обрабатываются")
+    void billingError_leavesSubscriptionLockedAndProcessesOthers() {
+        UUID failing = insert("ACTIVE", Instant.now().minus(Duration.ofMinutes(2)), false);
+        UUID ok = insert("ACTIVE", Instant.now().minus(Duration.ofMinutes(1)), false);
+        when(billing.createCharge(argThat(dto -> dto != null && dto.idempotencyKey().startsWith(failing.toString()))))
+                .thenThrow(HttpServerErrorException.create(HttpStatus.BAD_GATEWAY, "", null, null, null));
+        when(billing.createCharge(argThat(dto -> dto != null && dto.idempotencyKey().startsWith(ok.toString()))))
+                .thenReturn(new ChargeOutcome.Charged(UUID.randomUUID()));
+
+        assertThatCode(this::runJob).doesNotThrowAnyException();
+
+        Map<String, Object> failed = row(failing);
+        assertThat(failed.get("status")).isEqualTo("ACTIVE");
+        assertThat(failed.get("last_charge_transaction_id")).isNull();
+        //lease не сняли: подписку возьмут снова только после его истечения
+        assertThat(instant(failed, "charge_locked_until")).isAfter(after);
+        assertThat(row(ok).get("last_charge_transaction_id")).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Подписку отменили, пока шёл запрос в billing: Charged не возвращает её к жизни")
+    void canceledDuringCharge_staysCanceled() {
+        UUID id = insert("ACTIVE", Instant.now().minus(Duration.ofMinutes(1)), false);
+        when(billing.createCharge(any())).thenAnswer(invocation -> {
+            jdbc.update("update subscriptions set status = 'CANCELED', canceled_at = now() where id = ?", id);
+            return new ChargeOutcome.Charged(UUID.randomUUID());
+        });
+
+        assertThatCode(this::runJob).doesNotThrowAnyException();
+
+        Map<String, Object> row = row(id);
+        assertThat(row.get("status")).isEqualTo("CANCELED");
+        assertThat(row.get("last_charge_transaction_id")).isNull();
+    }
+
+    private void runJob() {
+        before = Instant.now();
+        job.chargeDueSubscriptions();
+        after = Instant.now();
+    }
+
+    //Значение, которое джоба посчитала как now + offset, лежит между before + offset и after + offset
+    private void assertThatInWindow(Instant actual, Duration offset) {
+        assertThat(actual).isBetween(before.plus(offset).minus(TOLERANCE), after.plus(offset).plus(TOLERANCE));
+    }
+
+    private void assertCanceled(UUID id) {
+        Map<String, Object> row = row(id);
+        assertThat(row.get("status")).isEqualTo("CANCELED");
+        assertThatInWindow(instant(row, "canceled_at"), Duration.ZERO);
+        assertThat(row.get("charge_locked_until")).isNull();
+    }
+
+    private UUID insert(String status, Instant nextChargeAt, boolean cancelAtPeriodEnd) {
+        return jdbc.queryForObject("""
+                insert into subscriptions (id, user_id, tariff_id, status, price, current_period_start, next_charge_at, cancel_at_period_end)
+                values (gen_random_uuid(), ?, ?, ?, 499.00, ?, ?, ?)
+                returning id
+                """, UUID.class, UUID.randomUUID(), tariffId, status,
+                Timestamp.from(nextChargeAt.minus(Duration.ofDays(30))), Timestamp.from(nextChargeAt), cancelAtPeriodEnd);
+    }
+
+    private UUID userId(UUID id) {
+        return jdbc.queryForObject("select user_id from subscriptions where id = ?", UUID.class, id);
+    }
+
+    private Map<String, Object> row(UUID id) {
+        return jdbc.queryForMap("select * from subscriptions where id = ?", id);
+    }
+
+    private static Instant instant(Map<String, Object> row, String column) {
+        return ((Timestamp) row.get(column)).toInstant();
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\subscription\repository\SubscriptionRepositoryIT.java ===
+package io.cvvexxx.services.subscription.repository;
+
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository.DueSubscription;
+import io.cvvexxx.services.subscription.service.SubscriptionChargeService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Testcontainers
+@EnabledIfDockerAvailable
+class SubscriptionRepositoryIT {
+
+    private static final Instant NOW = Instant.parse("2026-11-01T12:00:00Z");
+    private static final Instant LOCKED_UNTIL = NOW.plus(Duration.ofMinutes(2));
+
+    @Container
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
+
+    @DynamicPropertySource
+    static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    }
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private SubscriptionChargeService subscriptionChargeService;
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private UUID tariffId;
+
+    @BeforeEach
+    void setUp() {
+        jdbc.update("delete from subscriptions");
+        tariffId = jdbc.queryForObject("""
+                insert into tariffs (id, name, category, price) values (gen_random_uuid(), 'Интернет 500', 'INTERNET', 499.00)
+                returning id
+                """, UUID.class);
+    }
+
+    @Test
+    @DisplayName("claim берёт только подписки к списанию без живого lease и ставит lease, повторный claim пустой")
+    void claimDueForCharge_takesOnlyDueAndUnlocked() {
+        UUID dueActive = insertSubscription("ACTIVE", NOW.minusSeconds(60), null);
+        UUID dueSuspended = insertSubscription("SUSPENDED", NOW.minusSeconds(60), null);
+        UUID leaseExpired = insertSubscription("ACTIVE", NOW.minusSeconds(60), NOW.minusSeconds(1));
+        insertSubscription("ACTIVE", NOW.plusSeconds(60), null);//ещё рано
+        insertSubscription("CANCELED", NOW.minusSeconds(60), null);//отменена
+        insertSubscription("ACTIVE", NOW.minusSeconds(60), NOW.plusSeconds(30));//lease другого инстанса
+
+        List<DueSubscription> claimed = subscriptionRepository.claimDueForCharge(NOW, LOCKED_UNTIL, 100);
+
+        assertThat(claimed).extracting(DueSubscription::getId)
+                .containsExactlyInAnyOrder(dueActive, dueSuspended, leaseExpired);
+        DueSubscription suspended = claimed.stream().filter(s -> s.getId().equals(dueSuspended)).findFirst().orElseThrow();
+        assertThat(suspended.getStatus()).isEqualTo(SubscriptionStatus.SUSPENDED);
+        assertThat(suspended.getNextChargeAt()).isEqualTo(NOW.minusSeconds(60));
+        assertThat(suspended.getPrice()).isEqualByComparingTo("499.00");
+        assertThat(suspended.getTariffName()).isEqualTo("Интернет 500");
+        assertThat(suspended.getCancelAtPeriodEnd()).isFalse();
+        assertThat(lockedUntil(dueActive)).isEqualTo(LOCKED_UNTIL);
+
+        assertThat(subscriptionRepository.claimDueForCharge(NOW, LOCKED_UNTIL, 100)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("claim уважает batchSize и берёт самые старые первыми")
+    void claimDueForCharge_respectsBatchSize() {
+        UUID oldest = insertSubscription("ACTIVE", NOW.minusSeconds(300), null);
+        insertSubscription("ACTIVE", NOW.minusSeconds(60), null);
+
+        assertThat(subscriptionRepository.claimDueForCharge(NOW, LOCKED_UNTIL, 1))
+                .extracting(DueSubscription::getId).containsExactly(oldest);
+    }
+
+    @Test
+    @DisplayName("markCharged продлевает период и снимает lease, запоздавший повтор со старым next_charge_at ничего не меняет")
+    void markCharged_ignoresStaleClaim() {
+        Instant claimedNextChargeAt = NOW.minusSeconds(60);
+        UUID id = insertSubscription("SUSPENDED", claimedNextChargeAt, LOCKED_UNTIL);
+        UUID transactionId = UUID.randomUUID();
+        Instant nextChargeAt = NOW.plus(Duration.ofDays(30));
+
+        assertThat(subscriptionChargeService.markCharged(id, claimedNextChargeAt, NOW, nextChargeAt, transactionId)).isTrue();
+
+        Map<String, Object> row = jdbc.queryForMap("select * from subscriptions where id = ?", id);
+        assertThat(row.get("status")).isEqualTo("ACTIVE");
+        assertThat(((Timestamp) row.get("current_period_start")).toInstant()).isEqualTo(NOW);
+        assertThat(((Timestamp) row.get("next_charge_at")).toInstant()).isEqualTo(nextChargeAt);
+        assertThat(row.get("last_charge_transaction_id")).isEqualTo(transactionId);
+        assertThat(row.get("charge_locked_until")).isNull();
+
+        assertThat(subscriptionChargeService.markCharged(id, claimedNextChargeAt, NOW, nextChargeAt, UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    @DisplayName("markSuspended ставит SUSPENDED и backoff, markCanceled не трогает уже отменённую")
+    void markSuspendedAndCanceled() {
+        Instant claimedNextChargeAt = NOW.minusSeconds(60);
+        UUID id = insertSubscription("ACTIVE", claimedNextChargeAt, LOCKED_UNTIL);
+        Instant retryAt = NOW.plus(Duration.ofHours(1));
+
+        assertThat(subscriptionChargeService.markSuspended(id, claimedNextChargeAt, retryAt)).isTrue();
+        assertThat(jdbc.queryForObject("select status from subscriptions where id = ?", String.class, id)).isEqualTo("SUSPENDED");
+        assertThat(lockedUntil(id)).isEqualTo(retryAt);
+
+        assertThat(subscriptionChargeService.markCanceled(id, claimedNextChargeAt, NOW)).isTrue();
+        assertThat(jdbc.queryForObject("select status from subscriptions where id = ?", String.class, id)).isEqualTo("CANCELED");
+        assertThat(lockedUntil(id)).isNull();
+        assertThat(subscriptionChargeService.markCanceled(id, claimedNextChargeAt, NOW)).isFalse();
+    }
+
+    private UUID insertSubscription(String status, Instant nextChargeAt, Instant chargeLockedUntil) {
+        return jdbc.queryForObject("""
+                insert into subscriptions (id, user_id, tariff_id, status, price, current_period_start, next_charge_at, charge_locked_until)
+                values (gen_random_uuid(), ?, ?, ?, 499.00, ?, ?, ?)
+                returning id
+                """, UUID.class, UUID.randomUUID(), tariffId, status,
+                Timestamp.from(nextChargeAt.minus(Duration.ofDays(30))), Timestamp.from(nextChargeAt),
+                chargeLockedUntil == null ? null : Timestamp.from(chargeLockedUntil));
+    }
+
+    private Instant lockedUntil(UUID id) {
+        Timestamp value = jdbc.queryForObject("select charge_locked_until from subscriptions where id = ?", Timestamp.class, id);
+        return value == null ? null : value.toInstant();
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\subscription\service\SubscriptionServiceTest.java ===
+package io.cvvexxx.services.subscription.service;
+
+import io.cvvexxx.services.client.BillingServiceRestClient;
+import io.cvvexxx.services.client.ChargeOutcome;
+import io.cvvexxx.services.subscription.dto.SubscriptionDto;
+import io.cvvexxx.services.subscription.entity.Subscription;
+import io.cvvexxx.services.subscription.entity.SubscriptionStatus;
+import io.cvvexxx.services.subscription.exception.ChargeDeclinedException;
+import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyCanceledException;
+import io.cvvexxx.services.subscription.exception.SubscriptionAlreadyExistsException;
+import io.cvvexxx.services.subscription.exception.TariffInactiveException;
+import io.cvvexxx.services.subscription.repository.SubscriptionRepository;
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.Tariff;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.repository.TariffRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SubscriptionServiceTest {
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+    @Mock
+    private TariffRepository tariffRepository;
+    @Mock
+    private BillingServiceRestClient billingClient;
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @InjectMocks
+    private SubscriptionService subscriptionService;
+
+    private final UUID userId = UUID.randomUUID();
+    private final UUID tariffId = UUID.randomUUID();
+    private Tariff activeTariff;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(subscriptionService, "leaseTtl", 300000L);
+        activeTariff = Tariff.builder()
+                .id(tariffId)
+                .name("Интернет 500")
+                .category(TariffCategory.INTERNET)
+                .price(new BigDecimal("500.00"))
+                .currency("RUB")
+                .billingPeriod(BillingPeriod.MONTH)
+                .active(true)
+                .build();
+
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(new SimpleTransactionStatus());
+        });
+        lenient().doAnswer(invocation -> {
+            Consumer< org.springframework.transaction.TransactionStatus> callback = invocation.getArgument(0);
+            callback.accept(new SimpleTransactionStatus());
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
+    }
+
+    @Test
+    @DisplayName("Успешная подписка: деньги списаны, транзакция сохранена, lease снят")
+    void subscribe_success() {
+        when(tariffRepository.findById(tariffId)).thenReturn(Optional.of(activeTariff));
+        when(subscriptionRepository.insertActiveIfAbsent(any(), eq(userId), eq(tariffId), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+
+        UUID txId = UUID.randomUUID();
+        when(billingClient.createCharge(any())).thenReturn(new ChargeOutcome.Charged(txId));
+        Subscription lockedSub = Subscription.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .tariff(activeTariff)
+                .status(SubscriptionStatus.ACTIVE)
+                .price(activeTariff.getPrice())
+                .currency("RUB")
+                .build();
+        when(subscriptionRepository.findByIdForUpdate(any())).thenReturn(Optional.of(lockedSub));
+
+        SubscriptionDto result = subscriptionService.subscribe(userId, tariffId);
+
+        assertThat(result.lastChargeTransactionId()).isEqualTo(txId);
+        assertThat(result.tariffName()).isEqualTo("Интернет 500");
+        assertThat(lockedSub.getChargeLockedUntil()).isNull();
+        verify(billingClient).createCharge(any());
+    }
+
+    @Test
+    @DisplayName("Ошибка: подключение архивного тарифа бросает TariffInactiveException")
+    void subscribe_tariffInactive() {
+        activeTariff.setActive(false);
+        when(tariffRepository.findById(tariffId)).thenReturn(Optional.of(activeTariff));
+
+        assertThatThrownBy(() -> subscriptionService.subscribe(userId, tariffId))
+                .isInstanceOf(TariffInactiveException.class);
+
+        verifyNoInteractions(subscriptionRepository, billingClient);
+    }
+
+    @Test
+    @DisplayName("Ошибка: повторное подключение активного тарифа бросает SubscriptionAlreadyExistsException")
+    void subscribe_alreadyExists() {
+        when(tariffRepository.findById(tariffId)).thenReturn(Optional.of(activeTariff));
+        when(subscriptionRepository.insertActiveIfAbsent(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(0);
+
+        assertThatThrownBy(() -> subscriptionService.subscribe(userId, tariffId))
+                .isInstanceOf(SubscriptionAlreadyExistsException.class);
+
+        verifyNoInteractions(billingClient);
+    }
+
+    @Test
+    @DisplayName("Отказ биллинга: черновик подписки удаляется и бросается ChargeDeclinedException")
+    void subscribe_billingDeclined_deletesDraft() {
+        when(tariffRepository.findById(tariffId)).thenReturn(Optional.of(activeTariff));
+        when(subscriptionRepository.insertActiveIfAbsent(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+        when(billingClient.createCharge(any())).thenReturn(new ChargeOutcome.Declined("charge.insufficient-funds"));
+
+        assertThatThrownBy(() -> subscriptionService.subscribe(userId, tariffId))
+                .isInstanceOf(ChargeDeclinedException.class)
+                .hasMessage("charge.insufficient-funds");
+
+        verify(subscriptionRepository).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("Отмена подписки: при immediate=false ставит флаг cancelAtPeriodEnd=true и оставляет ACTIVE")
+    void cancelSubscription_atPeriodEnd() {
+        UUID subId = UUID.randomUUID();
+        Subscription sub = Subscription.builder()
+                .id(subId)
+                .userId(userId)
+                .tariff(activeTariff)
+                .status(SubscriptionStatus.ACTIVE)
+                .price(activeTariff.getPrice())
+                .build();
+        when(subscriptionRepository.findByIdAndUserIdForUpdate(subId, userId)).thenReturn(Optional.of(sub));
+
+        SubscriptionDto result = subscriptionService.cancelSubscription(userId, subId, false, false);
+
+        assertThat(result.status()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(result.cancelAtPeriodEnd()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Отмена уже отменённой подписки бросает SubscriptionAlreadyCanceledException")
+    void cancelSubscription_alreadyCanceled_throwsException() {
+        UUID subId = UUID.randomUUID();
+        Subscription sub = Subscription.builder()
+                .id(subId)
+                .userId(userId)
+                .tariff(activeTariff)
+                .status(SubscriptionStatus.CANCELED)
+                .build();
+        when(subscriptionRepository.findByIdAndUserIdForUpdate(subId, userId)).thenReturn(Optional.of(sub));
+        assertThatThrownBy(() -> subscriptionService.cancelSubscription(userId, subId, true, false))
+                .isInstanceOf(SubscriptionAlreadyCanceledException.class);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\tariff\controller\TariffControllerTest.java ===
+package io.cvvexxx.services.tariff.controller;
+
+import io.cvvexxx.services.advice.GlobalExceptionHandler;
+import io.cvvexxx.services.config.SecurityBeans;
+import io.cvvexxx.services.tariff.dto.TariffDto;
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.service.TariffService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(TariffController.class)
+@ActiveProfiles("test")
+@Import({SecurityBeans.class, GlobalExceptionHandler.class})
+class TariffControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private TariffService tariffService;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
+    private static TariffDto sampleDto() {
+        return new TariffDto(
+                UUID.randomUUID(),
+                "Интернет 500",
+                "Описание",
+                TariffCategory.INTERNET,
+                new BigDecimal("499.00"),
+                "RUB",
+                BillingPeriod.MONTH,
+                true,
+                Instant.parse("2026-11-01T12:00:00Z")
+        );
+    }
+
+    @Test
+    @DisplayName("GET /api/services/tariffs доступен без авторизации")
+    void getActiveTariffs_publicAccess() throws Exception {
+        TariffDto dto = sampleDto();
+        when(tariffService.getActiveTariffs(eq(null), any())).thenReturn(new PageImpl<>(List.of(dto)));
+
+        mockMvc.perform(get("/api/services/tariffs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Интернет 500"));
+    }
+
+    @Test
+    @DisplayName("GET /api/services/tariffs с запрещённым полем сортировки возвращает 400 Bad Request")
+    void getActiveTariffs_invalidSort_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/services/tariffs").param("sort", "unknownField,asc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("error.invalid-sort"));
+    }
+
+    @Test
+    @DisplayName("POST /api/services/tariffs с ролью USER возвращает 403 Forbidden")
+    void createTariff_asUser_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/services/tariffs")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Тариф", "category": "INTERNET", "price": 500.00}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /api/services/tariffs с ролью ADMIN создаёт тариф и возвращает 201 Created")
+    void createTariff_asAdmin_returnsCreated() throws Exception {
+        TariffDto dto = sampleDto();
+        when(tariffService.createTariff(any())).thenReturn(dto);
+        mockMvc.perform(post("/api/services/tariffs")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Интернет 500", "category": "INTERNET", "price": 499.00}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(dto.id().toString()))
+                .andExpect(jsonPath("$.name").value("Интернет 500"));
+    }
+
+    @Test
+    @DisplayName("POST /api/services/tariffs с пустым именем и отрицательной ценой возвращает 400 и ошибки валидации")
+    void createTariff_invalidBody_returnsValidationErrors() throws Exception {
+        mockMvc.perform(post("/api/services/tariffs")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "   ", "category": "INTERNET", "price": -10.00}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("error.validation-failed"))
+                .andExpect(jsonPath("$.errors.name").exists())
+                .andExpect(jsonPath("$.errors.price").exists());
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\java\io\cvvexxx\services\tariff\service\TariffServiceIT.java ===
+package io.cvvexxx.services.tariff.service;
+
+import io.cvvexxx.services.tariff.dto.CreateTariffDto;
+import io.cvvexxx.services.tariff.dto.TariffDto;
+import io.cvvexxx.services.tariff.dto.UpdateTariffDto;
+import io.cvvexxx.services.tariff.entity.BillingPeriod;
+import io.cvvexxx.services.tariff.entity.TariffCategory;
+import io.cvvexxx.services.tariff.exception.TariffAlreadyExistsException;
+import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Testcontainers
+@EnabledIfDockerAvailable
+class TariffServiceIT {
+
+    @Container
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
+
+    @DynamicPropertySource
+    static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    }
+
+    @Autowired
+    private TariffService tariffService;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @BeforeEach
+    void setUp() {
+        jdbc.update("delete from subscriptions");
+        jdbc.update("delete from tariffs");
+    }
+
+    @Test
+    @DisplayName("Создание тарифа: обрезает пробелы, выставляет дефолтный период MONTH и сохраняет в БД")
+    void createTariff_savesAndTrimsFields() {
+        CreateTariffDto dto = new CreateTariffDto(
+                "  Интернет 500  ",
+                "  Быстрый домашний интернет  ",
+                TariffCategory.INTERNET,
+                new BigDecimal("499.00"),
+                null
+        );
+
+        TariffDto created = tariffService.createTariff(dto);
+
+        assertThat(created.id()).isNotNull();
+        assertThat(created.name()).isEqualTo("Интернет 500");
+        assertThat(created.description()).isEqualTo("Быстрый домашний интернет");
+        assertThat(created.category()).isEqualTo(TariffCategory.INTERNET);
+        assertThat(created.price()).isEqualByComparingTo("499.00");
+        assertThat(created.currency()).isEqualTo("RUB");
+        assertThat(created.billingPeriod()).isEqualTo(BillingPeriod.MONTH);
+        assertThat(created.active()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Создание дубликата по имени: insertIfAbsent возвращает 0 и бросает TariffAlreadyExistsException")
+    void createTariff_duplicateName_throwsAlreadyExists() {
+        CreateTariffDto dto = new CreateTariffDto(
+                "Интернет 500", "Описание", TariffCategory.INTERNET, new BigDecimal("499.00"), BillingPeriod.MONTH
+        );
+        tariffService.createTariff(dto);
+
+        CreateTariffDto duplicate = new CreateTariffDto(
+                "  Интернет 500 ", "Другое описание", TariffCategory.TV, new BigDecimal("999.00"), BillingPeriod.MONTH
+        );
+
+        assertThatThrownBy(() -> tariffService.createTariff(duplicate))
+                .isInstanceOf(TariffAlreadyExistsException.class)
+                .hasMessage("tariff.already-exists");
+    }
+
+    @Test
+    @DisplayName("Получение тарифов: обычным пользователям возвращаются только активные, админу — все")
+    void getTariffs_filtersActiveAndCategory() {
+        TariffDto activeInternet = tariffService.createTariff(new CreateTariffDto(
+                "Интернет 100", null, TariffCategory.INTERNET, new BigDecimal("300.00"), BillingPeriod.MONTH));
+        TariffDto archivedInternet = tariffService.createTariff(new CreateTariffDto(
+                "Интернет Архив", null, TariffCategory.INTERNET, new BigDecimal("200.00"), BillingPeriod.MONTH));
+        TariffDto activeTv = tariffService.createTariff(new CreateTariffDto(
+                "ТВ Кино", null, TariffCategory.TV, new BigDecimal("400.00"), BillingPeriod.MONTH));
+
+        tariffService.archiveTariff(archivedInternet.id());
+
+        Page<TariffDto> activeAll = tariffService.getActiveTariffs(null, PageRequest.of(0, 10));
+        assertThat(activeAll.getContent()).extracting(TariffDto::id)
+                .containsExactlyInAnyOrder(activeInternet.id(), activeTv.id());
+
+        Page<TariffDto> activeInternetOnly = tariffService.getActiveTariffs(TariffCategory.INTERNET, PageRequest.of(0, 10));
+        assertThat(activeInternetOnly.getContent()).extracting(TariffDto::id)
+                .containsExactly(activeInternet.id());
+
+        Page<TariffDto> adminAll = tariffService.getAllTariffs(TariffCategory.INTERNET, PageRequest.of(0, 10));
+        assertThat(adminAll.getContent()).extracting(TariffDto::id)
+                .containsExactlyInAnyOrder(activeInternet.id(), archivedInternet.id());
+    }
+
+    @Test
+    @DisplayName("Получение по id: архивный тариф виден админу, но кидает TariffNotFoundException для пользователя")
+    void getTariffById_archivedVisibility() {
+        TariffDto created = tariffService.createTariff(new CreateTariffDto(
+                "Мобильный", null, TariffCategory.MOBILE, new BigDecimal("350.00"), BillingPeriod.MONTH));
+        tariffService.archiveTariff(created.id());
+
+        assertThatThrownBy(() -> tariffService.getTariffById(created.id(), false))
+                .isInstanceOf(TariffNotFoundException.class);
+
+        TariffDto forAdmin = tariffService.getTariffById(created.id(), true);
+        assertThat(forAdmin.active()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Обновление тарифа: меняет переданные поля и запрещает переименование в уже занятое имя")
+    void updateTariff_updatesFieldsAndChecksDuplicateName() {
+        TariffDto first = tariffService.createTariff(new CreateTariffDto(
+                "Тариф 1", "Старое", TariffCategory.INTERNET, new BigDecimal("300.00"), BillingPeriod.MONTH));
+        tariffService.createTariff(new CreateTariffDto(
+                "Тариф 2", "Второй", TariffCategory.INTERNET, new BigDecimal("400.00"), BillingPeriod.MONTH));
+
+        UpdateTariffDto updateDto = new UpdateTariffDto(
+                "  Тариф 1 Обновленный  ",
+                "Новое описание",
+                TariffCategory.MOBILE,
+                new BigDecimal("550.00"),
+                false
+        );
+
+        TariffDto updated = tariffService.updateTariff(first.id(), updateDto);
+        assertThat(updated.name()).isEqualTo("Тариф 1 Обновленный");
+        assertThat(updated.description()).isEqualTo("Новое описание");
+        assertThat(updated.category()).isEqualTo(TariffCategory.MOBILE);
+        assertThat(updated.price()).isEqualByComparingTo("550.00");
+        assertThat(updated.active()).isFalse();
+
+        UpdateTariffDto conflictDto = new UpdateTariffDto("Тариф 2", null, null, null, null);
+        assertThatThrownBy(() -> tariffService.updateTariff(first.id(), conflictDto))
+                .isInstanceOf(TariffAlreadyExistsException.class);
+    }
+}
+=== C:\Users\olegb\rostelekom-it-backend\services-service\src\test\resources\application-test.properties ===
+USER_SERVICE_URI=http://localhost:8081
+BILLING_SERVICE_URI=http://localhost:8082
+JWT_ISSUER=http://localhost:8081
+JWT_AUDIENCE=rostelekom
+
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+spring.jpa.hibernate.ddl-auto=validate
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+app.scheduling.enabled=false

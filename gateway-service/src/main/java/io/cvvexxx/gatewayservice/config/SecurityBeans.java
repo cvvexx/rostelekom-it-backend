@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -44,6 +46,7 @@ public class SecurityBeans {
                         request -> request
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/api/billing/yookassa/webhook").permitAll()//Webhook ЮKassa приходит без JWT
+                                .requestMatchers(HttpMethod.GET, "/api/services/tariffs", "/api/services/tariffs/*").permitAll()
                                 .requestMatchers("/fallback/**", "/error").permitAll()
                                 .anyRequest().authenticated()
                 )
@@ -71,13 +74,22 @@ public class SecurityBeans {
     public AuthenticationEntryPoint authenticationEntryPoint(
             //Бинов типа HandlerExceptionResolver в Spring несколько, поэтому через @Qualifier явно говорим, какой взять(по имени)
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
+        AuthenticationEntryPoint bearer = new BearerTokenAuthenticationEntryPoint();
+        //Bearer-обработчик ставит статус и WWW-Authenticate, resolver пишет тело в ProblemDetail
+        return (request, response, e) -> {
+            bearer.commence(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
     @Bean //Обработчик 403, аналогично тому, что сверху
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
+        AccessDeniedHandler bearer = new BearerTokenAccessDeniedHandler();
+        return (request, response, e) -> {
+            bearer.handle(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
 }

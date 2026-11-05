@@ -17,6 +17,7 @@
 		<module>user-service</module>
 		<module>gateway-service</module>
 		<module>billing-service</module>
+		<module>services-service</module>
 	</modules>
 
 	<properties>

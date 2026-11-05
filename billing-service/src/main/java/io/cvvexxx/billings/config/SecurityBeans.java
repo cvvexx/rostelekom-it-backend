@@ -6,11 +6,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -24,9 +27,38 @@ import java.util.stream.Collectors;
 @Configuration
 public class SecurityBeans {
 
-
+    //Межсервисные эндпоинты
+    @Order(1)
     @Bean
-    public SecurityFilterChain securityFilterChain(
+    public SecurityFilterChain internalSecurityFilterChain(
+            HttpSecurity httpSecurity,
+            AuthenticationEntryPoint authenticationEntryPoint,
+            AccessDeniedHandler accessDeniedHandler
+    ) {
+        return httpSecurity
+                .securityMatcher("/internal/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(request ->
+                        request.anyRequest().hasRole("SERVICE"))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2
+                                .jwt(jwtConfigurer ->
+                                        jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .accessDeniedHandler(accessDeniedHandler)
+                )
+                .exceptionHandling(exceptions ->
+                        exceptions.authenticationEntryPoint(authenticationEntryPoint))
+                .build();
+    }
+
+
+    //Пользовательские эндпоинты
+    @Order(2)
+    @Bean
+    public SecurityFilterChain userSecurityFilterChain(
             HttpSecurity httpSecurity,
             AuthenticationEntryPoint authenticationEntryPoint,
             AccessDeniedHandler accessDeniedHandler
@@ -36,7 +68,7 @@ public class SecurityBeans {
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, YooKassaWebhookController.PATH).permitAll()//Webhook ЮKassa приходит без JWT
-                        .anyRequest().authenticated()
+                        .anyRequest().hasAnyRole("USER", "ADMIN")
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))//Сессии не храним, каждый запрос проверяется по токену
@@ -78,13 +110,21 @@ public class SecurityBeans {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
+        AuthenticationEntryPoint bearer = new BearerTokenAuthenticationEntryPoint();
+        return (request, response, e) -> {
+            bearer.commence(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
+        AccessDeniedHandler bearer = new BearerTokenAccessDeniedHandler();
+        return (request, response, e) -> {
+            bearer.handle(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
 }

@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -35,6 +37,8 @@ public class SecurityBeans {
                         request -> request
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json").permitAll()
+                                //Выдача сервисного токена: сервис ещё без токена, проверка по clientId/clientSecret внутри
+                                .requestMatchers(HttpMethod.POST, "/internal/auth/service-token").permitAll()
                                 //Swagger UI и OpenAPI-спека
                                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                                 //Для доступа к остальным эндпоинтам юзер должен быть аутентифицирован
@@ -64,14 +68,23 @@ public class SecurityBeans {
     public AuthenticationEntryPoint authenticationEntryPoint(
             //Бинов типа HandlerExceptionResolver в Spring несколько, поэтому через @Qualifier явно говорим, какой взять(по имени)
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
+        AuthenticationEntryPoint bearer = new BearerTokenAuthenticationEntryPoint();
+        //Bearer-обработчик ставит статус и WWW-Authenticate, resolver пишет тело в ProblemDetail
+        return (request, response, e) -> {
+            bearer.commence(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
     //Создаем обработчик ошибки 403
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
+        AccessDeniedHandler bearer = new BearerTokenAccessDeniedHandler();
+        return (request, response, e) -> {
+            bearer.handle(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
     //Конвертер JWT в роли

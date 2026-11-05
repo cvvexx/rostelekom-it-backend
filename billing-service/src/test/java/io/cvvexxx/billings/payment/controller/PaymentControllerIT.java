@@ -511,7 +511,8 @@ class PaymentControllerIT {
     }
 
     private RequestPostProcessor user(UUID userId) {
-        return jwt().jwt(jwt -> jwt.subject(userId.toString()));
+        return jwt().jwt(jwt -> jwt.subject(userId.toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     private RequestPostProcessor admin() {

@@ -64,11 +64,4 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    //Выпуск access-токена для межсервисных запросов (client credentials), refresh-токена нет - по истечении просят новый
-    @PostMapping("/service-token") //POST /api/auth/service-token
-    public ResponseEntity<ServiceTokenResponseDto> getServiceToken(
-            @Valid @RequestBody ServiceTokenRequestDto requestDto
-    ) {
-        return ResponseEntity.ok(authService.getServiceToken(requestDto));
-    }
 }
