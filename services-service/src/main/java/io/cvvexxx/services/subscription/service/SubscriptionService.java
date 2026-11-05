@@ -79,7 +79,13 @@ public class SubscriptionService {
                     "Оплата тарифа " + tariff.getName()
             ));
         } catch (RuntimeException e) {
-            transactionTemplate.executeWithoutResult(status -> subscriptionRepository.deleteById(subscriptionId));
+            transactionTemplate.executeWithoutResult(status -> {
+                subscriptionRepository.findByIdForUpdate(subscriptionId).ifPresent(sub -> {
+                    sub.setStatus(SubscriptionStatus.SUSPENDED);
+                    sub.setNextChargeAt(now);
+                    sub.setChargeLockedUntil(null);
+                });
+            });
             throw e;
         }
 

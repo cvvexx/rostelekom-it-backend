@@ -11,6 +11,7 @@ import io.cvvexxx.services.tariff.exception.TariffNotFoundException;
 import io.cvvexxx.services.tariff.repository.TariffRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,12 @@ public class TariffService {
         }
         if (dto.active() != null) {
             tariff.setActive(dto.active());
+        }
+
+        try{
+            tariffRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new TariffAlreadyExistsException("tariff.already-exists", tariff.getName());
         }
 
         return toDto(tariff);
