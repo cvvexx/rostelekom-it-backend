@@ -34,4 +34,9 @@ public class FallbackController {
         return unavailable("error.billing-service-unavailable");
     }
 
+    @RequestMapping("/fallback/services")
+    public ProblemDetail servicesServiceFallback() {
+        return unavailable("error.services-service-unavailable");
+    }
+
 }

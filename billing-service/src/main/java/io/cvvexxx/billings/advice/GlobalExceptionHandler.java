@@ -81,7 +81,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, e);
     }
 
-    //HTTP 401(токен не валиден, истек или его вообще нет), вызывается из ProblemDetailAuthenticationEntryPoint
+    //HTTP 401(токен не валиден, истек или его вообще нет), вызывается из authenticationEntryPoint в SecurityBeans
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuthentication(AuthenticationException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,

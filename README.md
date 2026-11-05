@@ -1,9 +1,10 @@
 # rostelekom
 
-Бэкенд на Spring Boot, три сервиса:
+Бэкенд на Spring Boot, четыре сервиса:
 
 - **user-service** (порт `8081`) — юзеры, вход по номеру телефона через SMS-код (OTP), JWT-токены
 - **billing-service** (порт `8082`) — лицевой счёт, баланс, история операций, пополнение
+- **services-service** (порт `8083`) — тарифы и подписки, ежемесячное списание за подписки через billing
 - **gateway-service** (порт `8080`) — единая точка входа: принимает запросы, проверяет токен и прокидывает их в нужный сервис
 
 ## Как запустить
@@ -23,7 +24,10 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 # 4. Запустить billing-service (во втором терминале)
 ./mvnw -pl billing-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 
-# 5. Запустить gateway-service (в третьем терминале)
+# 5. Запустить services-service (в третьем терминале)
+./mvnw -pl services-service spring-boot:run "-Dspring-boot.run.profiles=dev"
+
+# 6. Запустить gateway-service (в четвёртом терминале)
 ./mvnw -pl gateway-service spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
@@ -31,7 +35,7 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 В профиле `dev` сервисы сами читают `.env.dev` из корня репы (через `spring.config.import` в `application-dev.properties`). Ставить плагин EnvFile и что-то прописывать в Run Configuration не надо. Если `.env.dev` нет, берутся дефолты, и с `docker-compose.dev.yml` всё работает как есть.
 
-Из IntelliJ тоже можно: открыть `UserServiceApplication` / `BillingServiceApplication` / `GatewayServiceApplication`, нажать ▶, а в Run Configuration в поле *Active profiles* вписать `dev`.
+Из IntelliJ тоже можно: открыть `UserServiceApplication` / `BillingServiceApplication` / `ServicesServiceApplication` / `GatewayServiceApplication`, нажать ▶, а в Run Configuration в поле *Active profiles* вписать `dev`.
 
 Тесты: `./mvnw test`
 
@@ -39,6 +43,7 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 - user-service: **http://localhost:8081/swagger-ui.html**
 - billing-service: **http://localhost:8082/swagger-ui.html**
+- services-service: **http://localhost:8083/swagger-ui.html**
 
 Swagger открывается напрямую на сервисе, а не через gateway. Спека в JSON лежит по `/v3/api-docs` на тех же портах, из неё можно сгенерировать клиент для фронта.
 
@@ -46,7 +51,7 @@ Swagger открывается напрямую на сервисе, а не ч�
 1. `POST /api/auth/otp/request` с номером телефона — в dev-режиме код придёт прямо в ответе
 2. `POST /api/auth/otp/verify` с номером и кодом — получишь `accessToken`
 3. Жмёшь **Authorize** сверху, вставляешь токен — теперь работают `/api/users/me` и остальные закрытые ручки
-4. Тот же токен подходит и для Swagger billing-service
+4. Тот же токен подходит и для Swagger billing-service и services-service
 
 ## API для фронта
 
@@ -99,6 +104,32 @@ Swagger открывается напрямую на сервисе, а не ч�
 - `Idempotency-Key` обязателен (до 64 символов). Генерируй новый UUID на каждое нажатие «Пополнить» и повторяй тот же ключ при ретрае, тогда двойного платежа не будет.
 - `status`: `PENDING` (ждём оплату), `SUCCEEDED` (деньги зачислены), `CANCELED`.
 - **Сейчас вместо платёжки заглушка.** `confirmationUrl` — это путь вида `/api/billing/stub/pay/stub-<id>`, на который надо отправить `POST` с токеном. После этого платёж станет `SUCCEEDED`, а баланс увеличится. С настоящим провайдером тут будет редирект на страницу оплаты, этот кусок фронта потом поменяется.
+
+### Тарифы
+
+| Запрос | Тело | Ответ |
+|---|---|---|
+| `GET /api/services/tariffs?category=INTERNET&page=0&size=20` | — | страница активных тарифов, **без токена** |
+| `GET /api/services/tariffs/{id}` | — | `{ id, name, description, category, price, currency, billingPeriod, active, createdAt }`, **без токена** |
+
+- `category`: `INTERNET`, `TV`, `MOBILE`, параметр необязательный.
+- Сортировка: `sort=createdAt|price|name|category,asc|desc`.
+- Управление тарифами (`GET /all`, `POST`, `PATCH /{id}`, `DELETE /{id}` — архивация) только для `ADMIN`.
+
+### Подписки
+
+| Запрос | Тело | Ответ |
+|---|---|---|
+| `POST /api/services/subscriptions` | `{ "tariffId": "..." }` | `201` + подписка, первый месяц списывается сразу |
+| `GET /api/services/subscriptions/my?page=0&size=20` | — | страница своих подписок, новые сверху |
+| `GET /api/services/subscriptions/{id}` | — | подписка |
+| `POST /api/services/subscriptions/{id}/cancel?immediate=false` | — | подписка после отмены |
+
+- Подписка: `{ id, tariffId, tariffName, tariffCategory, status, price, currency, billingPeriod, currentPeriodStart, nextChargeAt, cancelAtPeriodEnd, canceledAt, createdAt, ... }`.
+- `status`: `ACTIVE`, `SUSPENDED` (не хватило денег, сервис сам повторит списание; если не оплатить за 30 дней — подписка отменится), `CANCELED`.
+- Нужен открытый счёт с деньгами. Если денег не хватило или счёта нет, `POST` вернёт `409`, подписка не создаётся. На один тариф может быть только одна активная подписка, повтор — тоже `409`.
+- Отмена по умолчанию в конце оплаченного периода (`cancelAtPeriodEnd: true`), `immediate=true` — сразу, деньги за текущий период не возвращаются.
+- Списание за следующий месяц сервис делает сам раз в `nextChargeAt`.
 
 ### Ошибки
 

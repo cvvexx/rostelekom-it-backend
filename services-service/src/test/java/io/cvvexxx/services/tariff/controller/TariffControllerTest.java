@@ -148,7 +148,8 @@ class TariffControllerTest {
         mockMvc.perform(get("/api/services/tariffs/all"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/services/tariffs/all").with(jwt().authorities(USER)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("error.forbidden"));
         mockMvc.perform(get("/api/services/tariffs/all").with(jwt().authorities(ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Интернет 500"));
@@ -192,7 +193,9 @@ class TariffControllerTest {
                         .content("""
                                 {"name": "Тариф", "category": "INTERNET", "price": 500.00}
                                 """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("WWW-Authenticate"))
+                .andExpect(jsonPath("$.code").value("error.unauthorized"));
 
         verifyNoInteractions(tariffService);
     }

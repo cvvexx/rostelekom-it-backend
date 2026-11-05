@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -105,13 +107,21 @@ public class SecurityBeans {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAuthenticationEntryPoint(handlerExceptionResolver);
+        AuthenticationEntryPoint bearer = new BearerTokenAuthenticationEntryPoint();
+        return (request, response, e) -> {
+            bearer.commence(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
-        return new ProblemDetailAccessDeniedHandler(handlerExceptionResolver);
+        AccessDeniedHandler bearer = new BearerTokenAccessDeniedHandler();
+        return (request, response, e) -> {
+            bearer.handle(request, response, e);
+            handlerExceptionResolver.resolveException(request, response, null, e);
+        };
     }
 
 }
