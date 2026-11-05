@@ -163,4 +163,48 @@ class TariffServiceIT {
         assertThatThrownBy(() -> tariffService.updateTariff(first.id(), conflictDto))
                 .isInstanceOf(TariffAlreadyExistsException.class);
     }
+
+    @Test
+    @DisplayName("Частичное обновление: null-поля не трогаются, переименование в своё же имя разрешено")
+    void updateTariff_partialAndSameName() {
+        TariffDto created = tariffService.createTariff(new CreateTariffDto(
+                "Интернет 300", "Описание", TariffCategory.INTERNET, new BigDecimal("300.00"), BillingPeriod.MONTH));
+
+        TariffDto updated = tariffService.updateTariff(created.id(),
+                new UpdateTariffDto("Интернет 300", null, null, new BigDecimal("350.00"), null));
+
+        assertThat(updated.name()).isEqualTo("Интернет 300");
+        assertThat(updated.description()).isEqualTo("Описание");
+        assertThat(updated.category()).isEqualTo(TariffCategory.INTERNET);
+        assertThat(updated.price()).isEqualByComparingTo("350.00");
+        assertThat(updated.active()).isTrue();
+        assertThat(jdbc.queryForObject("select price from tariffs where id = ?", BigDecimal.class, created.id()))
+                .isEqualByComparingTo("350.00");
+    }
+
+    @Test
+    @DisplayName("Архивация: тариф пропадает из активных, но остаётся в БД с active=false")
+    void archiveTariff_setsInactive() {
+        TariffDto created = tariffService.createTariff(new CreateTariffDto(
+                "ТВ Базовый", null, TariffCategory.TV, new BigDecimal("200.00"), BillingPeriod.MONTH));
+
+        TariffDto archived = tariffService.archiveTariff(created.id());
+
+        assertThat(archived.active()).isFalse();
+        assertThat(jdbc.queryForObject("select active from tariffs where id = ?", Boolean.class, created.id())).isFalse();
+        assertThat(tariffService.getActiveTariffs(null, PageRequest.of(0, 10)).getContent()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Обновление и архивация несуществующего тарифа бросают TariffNotFoundException")
+    void updateAndArchive_notFound() {
+        UUID missing = UUID.randomUUID();
+
+        assertThatThrownBy(() -> tariffService.updateTariff(missing, new UpdateTariffDto(null, null, null, null, null)))
+                .isInstanceOf(TariffNotFoundException.class);
+        assertThatThrownBy(() -> tariffService.archiveTariff(missing))
+                .isInstanceOf(TariffNotFoundException.class);
+        assertThatThrownBy(() -> tariffService.getTariffById(missing, true))
+                .isInstanceOf(TariffNotFoundException.class);
+    }
 }
