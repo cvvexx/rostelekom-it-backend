@@ -7,6 +7,7 @@ import io.cvvexxx.billings.account.exception.AccountClosedException;
 import io.cvvexxx.billings.account.exception.AccountNotFoundException;
 import io.cvvexxx.billings.account.repository.AccountRepository;
 import io.cvvexxx.billings.payment.dto.PaymentDto;
+import io.cvvexxx.billings.payment.dto.ToppedUpEvent;
 import io.cvvexxx.billings.payment.entity.Payment;
 import io.cvvexxx.billings.payment.entity.PaymentStatus;
 import io.cvvexxx.billings.payment.exception.IdempotencyKeyReusedException;
@@ -21,6 +22,7 @@ import io.cvvexxx.billings.transaction.entity.TransactionType;
 import io.cvvexxx.billings.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -42,6 +45,7 @@ public class PaymentService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentProvider paymentProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     //Без @Transactional: провайдер вызывается между двумя короткими транзакциями
     public PaymentDto createPayment(
@@ -209,6 +213,13 @@ public class PaymentService {
                 .balanceAfter(account.getBalance())
                 .build();
         transactionRepository.save(transaction);//сохраняем транзакцию
+
+        eventPublisher.publishEvent(new ToppedUpEvent(
+                account.getUserId(),
+                account.getId(),
+                paymentAmount,
+                Instant.now()
+        ));
 
         return toDto(payment);
     }

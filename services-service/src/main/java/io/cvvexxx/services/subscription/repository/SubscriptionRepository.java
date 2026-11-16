@@ -88,6 +88,18 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     List<DueSubscription> claimDueForCharge(@Param("now") Instant now, @Param("lockedUntil") Instant lockedUntil,
                                             @Param("batchSize") int batchSize);
 
+    @Transactional
+    @Modifying
+    @Query(value = """
+            update subscriptions
+            set charge_locked_until = null
+            where user_id = :userId
+              and status = 'SUSPENDED'
+              and next_charge_at <= :now
+              and charge_locked_until > :now
+            """, nativeQuery = true)
+    int unlockSuspendedForUser(@Param("userId") UUID userId, @Param("now") Instant now);
+
     interface DueSubscription {
         UUID getId();
 
